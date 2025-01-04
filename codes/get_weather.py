@@ -8,8 +8,28 @@ from datetime import datetime, timezone
 # Load environment variables
 VARS = dotenv_values()
 API_KEY = VARS["API_KEY"]
-COORDINATES = [key for key in VARS if key != "API_KEY"]
-FORECAST_FILE = Path.home() / "storage/shared/emulated/0/Download/weather.txt"  # Forecast file location for Android.
+COORDINATE_KEYS = [key for key in VARS if key != "API_KEY"]
+ACTIVITIES = ["farming", "fishing"]
+
+
+def get_index(items):
+    while True:
+        try:
+            index = int(input("> "))
+            if 1 <= index <=len(items):
+                return index - 1
+        except ValueError:
+            print("Please enter an integer.")
+        except KeyboardInterrupt:
+            print("Operation cancelled.")
+            sys.exit()
+
+
+def get_activity():
+    print("Choose an activity.")
+    for i, activity in enumerate(ACTIVITIES, start=1):
+        print(i, activity)
+    return ACTIVITIES[get_index(ACTIVITIES)]
 
 
 def fetch_weather_data(lat, lon, api_key):
@@ -40,79 +60,76 @@ def parse_weather_data(data):
     return daily_weather
 
 
-def filter_best_weather(daily_weather):
-    """Filter and rank days with the best weather."""
-    best_days = [
-        day for day in daily_weather
-        if 18 <= day['temp'] <= 25 and day['rain'] < 1 and day['wind_speed'] <= 10
-    ]
-    if not best_days:
-        best_days = [
-            day for day in daily_weather
-            if 15 <= day['temp'] <= 28 and day['rain'] < 5 and day['wind_speed'] <= 15
-        ]
+def filter_best_days(daily_weather, activity):
+    """Filter and rank days with the best weather for an activity."""
+    if activity == "fishing":
+        criteria = lambda day: (
+            19 <= day['temp'] <= 30 and day['rain'] < 1 and day['wind_speed'] <= 15
+        )
+    elif activity == "farming":
+        criteria = lambda day: (
+            19 <= day['temp'] <= 30 and day['rain'] < 1 and day['wind_speed'] <= 20
+        )
+    else:
+        return []
+
+    best_days = [day for day in daily_weather if criteria(day)]
     return sorted(
         best_days,
         key=lambda x: (abs(22 - x['temp']), x['rain'], x['wind_speed'])
     )[:5]
 
 
-def display_weather(daily_weather, best_days):
-    """Display the weather forecast and best weather days."""
+def display_weather(daily_weather, activity, best_activity_days):
+    """Display the weather forecast and best weather days for an activity."""
     print("\nWeather Forecast:")
     for day in daily_weather:
         print(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
               f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm")
     
-    print("\nBest Weather Days:")
-    for day in best_days:
+    print(f"\nBest {activity.capitalize} Days:")
+    for day in best_activity_days:
         print(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
               f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm")
 
 
-def save_weather_to_file(daily_weather, best_days):
+def save_weather_to_file(location_name, daily_weather, activity, best_activity_days):
     """Save the weather forecast and best days to a file."""
-    with open(FORECAST_FILE, 'w') as file:
+    forecast_file = Path.home() / f"storage/shared/Download/weather_{location_name}.txt"
+    with open(forecast_file, 'w') as file:
         file.write("Weather Forecast:\n")
         for day in daily_weather:
             file.write(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
                        f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm\n")
         
-        file.write("\nBest Weather Days:\n")
-        for day in best_days:
+        file.write(f"\nBest {activity.capitalize} Days:\n")
+        for day in best_activity_days:
             file.write(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
                        f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm\n")
-    print("Weather forecast saved to 'weather_forecast.txt'")
+
+    print(f"Weather forecast saved to '{forecast_file}'")
 
 
 def get_coordinates():
     """Prompt the user to choose a coordinate."""
     print("Select a location:")
-    for index, name in enumerate(COORDINATES, start=1):
+    for index, name in enumerate(COORDINATE_KEYS, start=1):
         print(f"{index}. {name}")
-    while True:
-        try:
-            choice = int(input("> "))
-            if 1 <= choice <= len(COORDINATES):
-                return [coord.strip() for coord in VARS[COORDINATES[choice - 1]].split(",")]
-            print("Invalid choice. Please select a valid number.")
-        except ValueError:
-            print("Please enter a number.")
-        except KeyboardInterrupt:
-            print("\nOperation cancelled.")
-            sys.exit(0)
+    
+    return name, [coord.strip() for coord in VARS[COORDINATE_KEYS[get_index(COORDINATE_KEYS)]].split(",")]
 
 
 def main():
-    lat, lon = get_coordinates()
+    activity = get_activity()
+    location_name, (lat, lon) = get_coordinates()
     raw_data = fetch_weather_data(lat, lon, API_KEY)
     daily_weather = parse_weather_data(raw_data)
-    best_days = filter_best_weather(daily_weather)
-    display_weather(daily_weather, best_days)
+    best_activity_days = filter_best_days(daily_weather, activity)
+    display_weather(daily_weather, activity, best_activity_days)
     
     save = input("\nDo you want to save this forecast to a file? (yes/no): ").strip().lower()
     if save in ['yes', 'y']:
-        save_weather_to_file(daily_weather, best_days)
+        save_weather_to_file(location_name, activity, daily_weather, best_activity_days)
 
 
 if __name__ == "__main__":
