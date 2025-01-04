@@ -87,7 +87,7 @@ def display_weather(daily_weather, activity, best_activity_days):
         print(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
               f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm")
     
-    print(f"\nBest {activity.capitalize} Days:")
+    print(f"\nBest {activity.capitalize()} Days:")
     for day in best_activity_days:
         print(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
               f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm")
@@ -102,7 +102,7 @@ def save_weather_to_file(location_name, daily_weather, activity, best_activity_d
             file.write(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
                        f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm\n")
         
-        file.write(f"\nBest {activity.capitalize} Days:\n")
+        file.write(f"\nBest {activity.capitalize()} Days:\n")
         for day in best_activity_days:
             file.write(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
                        f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm\n")
@@ -129,7 +129,7 @@ def main():
     
     save = input("\nDo you want to save this forecast to a file? (yes/no): ").strip().lower()
     if save in ['yes', 'y']:
-        save_weather_to_file(location_name, activity, daily_weather, best_activity_days)
+        save_weather_to_file(location_name, daily_weather, activity, best_activity_days)
 
 
 if __name__ == "__main__":
