@@ -1,1 +1,1 @@
-# This contains my android automation scripts using python.
+# A simple text based weather app in python using Openweathermap API.
