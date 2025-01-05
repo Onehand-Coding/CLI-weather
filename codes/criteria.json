@@ -1,0 +1,14 @@
+{
+    "farming": {
+        "temp_min": 19,
+        "temp_max": 30,
+        "rain": 5,
+        "wind_speed": 20
+    },
+    "fishing": {
+        "temp_min": 19,
+        "temp_max": 30,
+        "rain": 1.5,
+        "wind_speed": 13.0
+    }
+}
