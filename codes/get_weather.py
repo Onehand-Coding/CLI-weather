@@ -14,23 +14,23 @@ from dotenv import dotenv_values
 VARS = dotenv_values()
 API_KEY = VARS["API_KEY"]
 LOCAL_TIMEZONE = VARS['TZ']
-COORDINATE_KEYS = [key for key in VARS if key != "API_KEY" and key != "TZ"]
-CRIT_CONFIG = Path(__file__).parent / "criteria.json"
+COORDINATE_KEYS = [key for key in VARS if key not in {"API_KEY", "TZ"}]
+CONFIG_FILE = Path(__file__).parent / "activity-criteria.json"
 
 MAIN_OPTIONS =[
     {"View 5-Day Forecast": lambda : view_5day()},
-    {"View Best day for an Activity": lambda : view_best_activity_day()},
+    {"View Best day/s for an Activity": lambda : view_best_activity_day()},
     {"View Current Weather": lambda : view_current()},
     {"View Hourly Forecast": lambda : view_hourly()},
     {"View Forecast for a Certain day": lambda: view_certain_day()},
-    {"Customize Activity Criteria": lambda : customize_criteria()},
+    {"Manage Activities": lambda : manage_activities()},
     {"Exit": None}
 ]
 CUSTOMIZE_CRITERIA_OPTIONS=[
-    {"View Criterias": lambda : view_criterias()},
-    {"Add Criteria": lambda : add_criteria()},
-    {"Edit Criteria": lambda : edit_criteria()},
-    {"Delete Criteria": lambda : delete_criteria()},
+    {"View Activities": lambda : view_activity_config()},
+    {"Add Activity": lambda : add_activity()},
+    {"Edit Activity": lambda : edit_activity()},
+    {"Delete Activity": lambda : delete_activity()},
     {"Back to Main Menu": None}
 ]
 
@@ -39,9 +39,9 @@ def confirm(prompt):
     """Prompt user for confirmation."""
     choice = ""
     try:
-        while choice not in ["y", "n", "yes", "no"]:
+        while choice not in {"y", "n", "yes", "no"}:
             choice = input(f"{prompt} (Y/n): ").lower()
-        return choice == "y" or choice == "yes"
+        return choice in {"y", "yes"}
     except KeyboardInterrupt:
         print("Operation cancelled by user.")
         sys.exit(0)
@@ -62,128 +62,123 @@ def get_index(items: List[str]) -> int:
 
 def get_activity():
     print("Choose an activity.")
-    activities = sorted(load_criteria().keys())
+    activities = sorted(load_activities().keys())
     for i, activity in enumerate(activities, start=1):
         print(i, activity.capitalize())
     return activities[get_index(activities)]
 
 
-def view_criterias():
-    """View existing activity-criteria configurations."""
-    existing_criterias = load_criteria()
-    print("Existing activity-criteria configuration:\n")
-    for activity, criterias in existing_criterias.items():
-        print(f"{activity.capitalize()}:\n {criterias}")
-
-
-def add_criteria():
-    """Add new activity-criteria configuration."""
-    print("Adding new activity-criteria configuration...")
+def get_criteria(activity):
+    """Get criteria for an activity."""
+    print(f"Enter value for each criteria for {activity} activity.")
     while True:
         try:
-            activity = input("Enter activity name: ").lower()
-            temp_min = int(input("Enter new minimum temperature (°C): "))
-            temp_max = int(input("Enter new maximum temperature (°C): "))
-            rain = float(input("Enter new maximum rain (mm): "))
-            wind_speed = float(input("Enter new maximum wind speed (km/h): "))
+            temp_min = int(input("Enter minimum temperature (°C): "))
+            temp_max = int(input("Enter maximum temperature (°C): "))
+            rain = float(input("Enter maximum rain (mm): "))
+            wind_speed = float(input("Enter maximum wind speed (km/h): "))
             print(f"""{activity} Criterias:   
                 "temp_min": {temp_min},
                 "temp_max": {temp_max},
                 "rain": {rain},
                 "wind_speed": {wind_speed}""")
-            if confirm("Save activity?"):
-                criterias = load_criteria()
-                criterias[activity] = {"temp_min": temp_min, "temp_max": temp_max, "rain": rain, "wind_speed": wind_speed}
-                save_criteria(criterias)
-                print(f"New activity {activity} added successfully.")
-                return
-            else:
-                return
+            if confirm("Done?"):
+                return {"temp_min": temp_min, "temp_max": temp_max, "rain": rain, "wind_speed": wind_speed}
         except ValueError:
-            print("Enter an integer.")
-            print("Please Try Again.")
+            print("Please enter a valid value.")
         except KeyboardInterrupt:
             print("Operation cancelled.")
             sys.exit(0)
 
 
-def edit_criteria():
-    """Edit existing criterias for an activity."""
-    print("Choose activity to edit.")
+def view_activity_config():
+    """View existing activity-criteria configurations."""
+    activities = load_activities()
+    print("Existing activity-criteria configurations:\n")
+    for activity, criteria in activities.items():
+        print(f"{activity.capitalize()}:")
+        for k, v in criteria.items():
+            print(f"\t{k}: {v}")
+
+
+def add_activity():
+    """Add new activity-criteria configuration."""
+    print("Adding new activity-criteria configuration...")
+    activity = ""
+    while not activity:
+        activity = input("Enter activity name: ").lower().strip()
+    criteria = get_criteria(activity)
+    if confirm("Save activity?"):
+        activities = load_activities()
+        activities[activity] = criteria
+        save_activity(activities)
+        print(f"{activity.capitalize()} activity added successfully.")
+
+
+def edit_activity():
+    """Edit existing criteria for an activity."""
     activity = get_activity()
-    criterias = load_criteria()
-    print(f"\nEditing criterias for {activity.capitalize()}...")
-    print(f"Current criterias for {activity.capitalize()}: {criterias[activity]}\n")
-    while True:
-        try:
-            temp_min = int(input("Enter new minimum temperature (°C): "))
-            temp_max = int(input("Enter new maximum temperature (°C): "))
-            rain = float(input("Enter new maximum rain (mm): "))
-            wind_speed = float(input("Enter new maximum wind speed (km/h): "))
-            if all([temp_min, temp_max, rain, wind_speed]):
-                break
-        except ValueError:
-            print("Please enter an integer.")
-        except KeyboardInterrupt:
-            print("Operation cancelled.")
-    criterias[activity] = {"temp_min": temp_min, "temp_max": temp_max, "rain": rain, "wind_speed": wind_speed}
-    print(f"New criterias for {activity}:\n {criterias.get(activity)}")
+    activities = load_activities()
+    print(f"\nEditing criteria for {activity.capitalize()}...")
+    print(f"Current criteria for {activity.capitalize()}: {activities[activity]}\n")
+    activities[activity] = get_criteria(activity)
+    print(f"New criterias for {activity}:\n {activities.get(activity)}")
     if confirm("Save changes?"):
-        save_criteria(criterias)
+        save_activity(activities)
         print(f"Criterias for {activity.capitalize()} updated successfully.")
 
 
-def delete_criteria():
+def delete_activity():
     """Let user remove an existing activity-criteria configuration."""
     print("Choose activity to remove.")
     activity = get_activity()
-    criterias = load_criteria()
-    if confirm(f"Do you want to remove this activity? {activity}:  {criterias[activity]}"):
-        del criterias[activity]
-        save_criteria(criterias)
+    activities = load_activities()
+    if confirm(f"Do you want to remove this activity? {activity}:  {activities[activity]}"):
+        del activities[activity]
+        save_activity(activities)
         print(f"{activity.capitalize()} activity removed from activity-criteria configuration successfully.")
 
 
-def load_criteria():
-    """Load configuration file for criteria for each defined activity."""
+def load_activities():
+    """Load configuration file for activities."""
     try:
-        with open(CRIT_CONFIG, "r", encoding="utf-8") as f:
-            criteria = json.load(f)
-        return criteria
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            activities = json.load(f)
+        return activities
     except (json.JSONDecodeError, FileNotFoundError):
         print("Failed to read or find the criteria configuration file.")
         sys.exit(0)
 
 
-def save_criteria(criteria):
+def save_activity(activities):
     """Write back configured set of criteria for each activity."""
     try:
-        with open(CRIT_CONFIG, "w") as f:
-            json.dump(criteria, f, indent=4)
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(activities, f, indent=4)
     except Exception as e:
         print(f"Unexpected error occurred: {e}")
 
 
-def customize_criteria():
+def manage_activities():
     """Allow users to customize criteria for activities."""
     try:
         while True:
-            print("\nCustomize activity-criteria configurations.")
+            print("\nManage Activities.")
             print("--------------------------------")
             for index, option in enumerate(CUSTOMIZE_CRITERIA_OPTIONS, start=1):
                 print(f"{index}. {list(option)[0]}")
-            option_index = get_index(list(CUSTOMIZE_CRITERIA_OPTIONS))
-            option_func = list(CUSTOMIZE_CRITERIA_OPTIONS[option_index].values())[0]
-            if option_func is None:
+            index = get_index(list(CUSTOMIZE_CRITERIA_OPTIONS))
+            activity_func = list(CUSTOMIZE_CRITERIA_OPTIONS[index].values())[0]
+            if activity_func is None:
                 break
-            option_func()
+            activity_func()
     except KeyboardInterrupt:
         print("Operation cancelled.")
         sys.exit()
 
 
 def main_menu():
-    """Display the main options and let user choose one then return the corresponding function to execute."""
+    """Display the main options and let user choose one to execute the corresponding function."""
     print("\nMAIN OPTIONS")
     print("--------------------------------")
     for index, action in enumerate(MAIN_OPTIONS, start=1):
@@ -200,6 +195,24 @@ def view_5day():
 
     print("\n5-Day Forecast:")
     display_grouped_forecast(daily_weather, forecast_type="daily")
+    
+    if confirm("\nSave Weather Forecast to file?"):
+        save_weather_to_file(location_name, daily_weather)
+
+
+def view_best_activity_day():
+    """View best day/s for an activity in a chosen location."""
+    activity = get_activity()
+    location_name, (lat, lon) = get_coordinates()
+    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
+    daily_weather = parse_weather_data(raw_data)
+    best_activity_days = filter_best_days(daily_weather, activity)
+
+    print(f"\nBest Days for {activity.capitalize()}:")
+    display_grouped_forecast(best_activity_days, forecast_type="daily")
+    
+    if confirm("\nSave Weather Forecast to file?"):
+        save_weather_to_file(location_name, best_activity_days, activity, best_activity_days=True)
 
 
 def view_current():
@@ -239,18 +252,6 @@ def view_certain_day():
                 )
 
 
-def view_best_activity_day():
-    """View best day/s for an activity in a chosen location."""
-    activity = get_activity()
-    location_name, (lat, lon) = get_coordinates()
-    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
-    daily_weather = parse_weather_data(raw_data)
-    best_activity_days = filter_best_days(daily_weather, activity)
-
-    print(f"\nBest Days for {activity.capitalize()}:")
-    display_grouped_forecast(best_activity_days, forecast_type="daily")
-
-
 def get_coordinates():
     """Prompt the user to choose a coordinate."""
     print("Select a location:")
@@ -277,8 +278,7 @@ def choose_day(daily_weather):
     print(f"Wind Speed: {selected_day['wind_speed']:.2f} km/h")
     print(f"Rain: {selected_day['rain']} mm")
     
-    hourly_option = input("\nDo you want to see the hourly forecast for this day? (yes/no): ").strip().lower()
-    if hourly_option in ['yes', 'y']:
+    if confirm("\nDo you want to see the hourly forecast for this day?"):
         return selected_day['date']
     return None
 
@@ -343,7 +343,7 @@ def parse_weather_data(data, forecast_type="5-day"):
 
 def filter_best_days(daily_weather, activity):
     """Filter and rank days with the best weather for an activity."""
-    criteria = load_criteria().get(activity, {})
+    criteria = load_activities().get(activity, {})
     best_days = [
         day for day in daily_weather
         if criteria["temp_min"] <= day['temp'] <= criteria["temp_max"]
@@ -390,17 +390,13 @@ def display_grouped_forecast(forecast_data, forecast_type="daily"):
                   f"Wind: {entry['wind_speed']:.2f} km/h, Rain: {entry['rain']} mm")
 
 
-def save_weather_to_file(location_name, daily_weather, activity, best_activity_days):
+def save_weather_to_file(location_name, weather_days, activity=None, best_activity_days=False):
     """Save the weather forecast and best days to a file."""
     forecast_file = Path.home() / f"storage/shared/Download/{location_name}_weather.txt"
     with open(forecast_file, 'w') as file:
-        file.write("Weather Forecast:\n")
-        for day in daily_weather:
-            file.write(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
-                       f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm\n")
-
-        file.write(f"\nBest {activity.capitalize()} Days:\n")
-        for day in best_activity_days:
+        header = f"\nBest {activity.capitalize()} Days:\n" if activity is not None and best_activity_days else "Weather Forecast:\n"
+        file.write(header)
+        for day in weather_days:
             file.write(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}, "
                        f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm\n")
 
