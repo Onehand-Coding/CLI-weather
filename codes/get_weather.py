@@ -83,9 +83,14 @@ def get_criteria(activity):
             temp_min = int(input("Enter minimum temperature (°C): "))
             temp_max = int(input("Enter maximum temperature (°C): "))
             rain = float(input("Enter maximum rain (mm): "))
-            wind_speed = float(input("Enter maximum wind speed (km/h): "))
-            time_range = None
+            wind_max = float(input("Enter maximum wind speed (km/h): "))
+            
+            # Optional minimum wind speed
+            wind_min = None
+            if confirm("Does this activity require a minimum wind speed?"):
+                wind_min = float(input("Enter minimum wind speed (km/h): "))
 
+            time_range = None
             if confirm("Is this a time-specific activity?"):
                 time_start = input("Enter start time (HH:MM, 24-hour format, e.g., 06:00): ").strip()
                 time_end = input("Enter end time (HH:MM, 24-hour format, e.g., 12:00): ").strip()
@@ -95,7 +100,7 @@ def get_criteria(activity):
             Criteria:   
                     Temp: {temp_min}-{temp_max} °C
                     Rain: {rain} mm
-                    Wind: {wind_speed} km/h,
+                    Wind: {wind_min or 'N/A'}-{wind_max} km/h,
                     Time: {(time_range) if time_range else 'All Day'}""")
             
             if confirm("Save this criteria?"):
@@ -103,7 +108,8 @@ def get_criteria(activity):
                     "temp_min": temp_min,
                     "temp_max": temp_max,
                     "rain": rain,
-                    "wind_speed": wind_speed,
+                    "wind_min": wind_min,  # Include minimum wind speed
+                    "wind_max": wind_max,  # Rename for clarity
                     "time_range": time_range or ["00:00", "23:59"]
                 }
         except ValueError:
@@ -279,6 +285,7 @@ def filter_best_days(daily_weather, activity, hourly_weather):
     criteria = load_activities().get(activity, {})
     time_range = criteria.get("time_range", ["00:00", "23:59"])
 
+    # Handle time-specific activities
     if time_range != ["00:00", "23:59"]:
         def is_within_time_range(hour_entry):
             time = datetime.strptime(hour_entry["date"].split(" ")[1], "%H:%M:%S").time()
@@ -296,56 +303,61 @@ def filter_best_days(daily_weather, activity, hourly_weather):
             avg_temp = sum(h["temp"] for h in hours) / len(hours)
             total_rain = sum(h["rain"] for h in hours)
             max_wind = max(h["wind_speed"] for h in hours)
-            weather = hours[0]["weather"]  # Use the first hour's weather as a summary
+            min_wind = min(h["wind_speed"] for h in hours)
 
-            if criteria["temp_min"] <= avg_temp <= criteria["temp_max"] and total_rain <= criteria["rain"] and max_wind <= criteria["wind_speed"]:
+            # Check both wind_min and wind_max if applicable
+            if (
+                criteria["temp_min"] <= avg_temp <= criteria["temp_max"]
+                and total_rain <= criteria["rain"]
+                and (criteria.get("wind_min", 0) <= min_wind)
+                and max_wind <= criteria["wind_max"]
+            ):
                 best_days.append({
                     "date": date,
                     "temp": avg_temp,
                     "rain": total_rain,
-                    "wind_speed": max_wind,
-                    "weather": weather,
+                    "wind_speed": (min_wind, max_wind),
                     "hours": hours
                 })
 
-        return sorted(best_days, key=lambda x: (abs((criteria["temp_min"] + criteria["temp_max"]) / 2 - x["temp"]), x["rain"], x["wind_speed"]))
+        return sorted(best_days, key=lambda x: (abs((criteria["temp_min"] + criteria["temp_max"]) / 2 - x["temp"]), x["rain"], x["wind_speed"][1]))
 
+    # Handle non-time-specific activities
     best_days = [
         day for day in daily_weather
-        if criteria["temp_min"] <= day['temp'] <= criteria["temp_max"]
-        and day['rain'] <= criteria["rain"]
-        and day['wind_speed'] <= criteria["wind_speed"]
+        if (
+            criteria["temp_min"] <= day['temp'] <= criteria["temp_max"]
+            and day['rain'] <= criteria["rain"]
+            and (criteria.get("wind_min", 0) <= day['wind_speed'])
+            and day['wind_speed'] <= criteria["wind_max"]
+        )
     ]
 
     return sorted(best_days, key=lambda x: (abs((criteria["temp_min"] + criteria["temp_max"]) / 2 - x['temp']), x['rain'], x['wind_speed']))[:5]
 
 def display_grouped_forecast(forecast_data, forecast_type="daily"):
-    """Display grouped forecast data for daily or hourly types."""
     grouped_forecast = defaultdict(list)
 
-    # Group data by date
     for entry in forecast_data:
         date, time = entry['date'].split(" ") if " " in entry['date'] else (entry['date'], None)
         grouped_forecast[date].append({
             "time": time,
             "temp": entry['temp'],
-            "weather": entry.get('weather', '').capitalize(),  # Handle missing weather key
+            "weather": entry['weather'].capitalize(),
             "wind_speed": entry['wind_speed'],
             "rain": entry['rain']
         })
 
-    # Display grouped data
     for date, entries in grouped_forecast.items():
         print(f"\nForecast for {date}:")
 
-        # Calculate summary for the date
         avg_temp = sum(e['temp'] for e in entries) / len(entries)
         total_rain = sum(e['rain'] for e in entries)
         max_wind = max(e['wind_speed'] for e in entries)
-        weather_summary = entries[0]['weather'] if entries else "Unknown"
+        min_wind = min(e['wind_speed'] for e in entries)
 
-        print(f"  Summary: Avg Temp: {avg_temp:.2f}°C, Total Rain: {total_rain:.2f} mm, Max Wind: {max_wind:.2f} km/h, Weather: {weather_summary}")
-
+        print(f"  Summary: Avg Temp: {avg_temp:.2f}°C, Total Rain: {total_rain:.2f} mm, Wind Range: {min_wind:.2f}-{max_wind:.2f} km/h")
+        
         for entry in entries:
             time_info = f"Time: {entry['time']}, " if entry['time'] else ""
             print(f"  {time_info}Temp: {entry['temp']}°C, Weather: {entry['weather']}, "
