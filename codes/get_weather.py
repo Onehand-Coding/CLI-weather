@@ -1,11 +1,9 @@
 #!/data/data/com.termux/files/home/coding/cli-weather/.venv/bin/python3
-import os
 import sys
 import json
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from datetime import datetime, timezone
-from typing import List
 from collections import defaultdict
 import requests
 from dotenv import dotenv_values
@@ -17,24 +15,31 @@ LOCAL_TIMEZONE = VARS['TZ']
 COORDINATE_KEYS = [key for key in VARS if key not in {"API_KEY", "TZ"}]
 CONFIG_FILE = Path(__file__).parent / "activity-criteria.json"
 
-MAIN_OPTIONS =[
-    {"View 5-Day Forecast": lambda : view_5day()},
-    {"View Best day/s for an Activity": lambda : view_best_activity_day()},
-    {"View Current Weather": lambda : view_current()},
-    {"View Hourly Forecast": lambda : view_hourly()},
-    {"View Forecast for a Certain day": lambda: view_certain_day()},
-    {"Manage Activities": lambda : manage_activities()},
+MAIN_OPTIONS = [
+    {"View Current Weather": lambda: view_current()},
+    {"View Hourly Forecast": lambda: view_hourly()},
+    {"View 5-Day Forecast": lambda: view_5day()},
+    {"View Forecast for a Certain Day": lambda: view_certain_day()},
+    {"View Best Day(s) for an Activity": lambda: view_best_activity_day()},
+    {"Manage Activities": lambda: manage_activities()},
     {"Exit": None}
 ]
-CUSTOMIZE_CRITERIA_OPTIONS=[
-    {"View Activities": lambda : view_activity_config()},
-    {"Add Activity": lambda : add_activity()},
-    {"Edit Activity": lambda : edit_activity()},
-    {"Delete Activity": lambda : delete_activity()},
+
+CUSTOMIZE_CRITERIA_OPTIONS = [
+    {"View Activities": lambda: view_activities()},
+    {"Add Activity": lambda: add_activity()},
+    {"Edit Activity": lambda: edit_activity()},
+    {"Delete Activity": lambda: delete_activity()},
     {"Back to Main Menu": None}
 ]
+UNITS = {  # Units used when display criteria. 
+    "rain": "mm",
+    "temp_min": "°C",
+    "temp_max": "°C",
+    "wind_speed": "km/h"
+}
 
-
+# Helper functions.
 def confirm(prompt):
     """Prompt user for confirmation."""
     choice = ""
@@ -47,7 +52,8 @@ def confirm(prompt):
         sys.exit(0)
 
 
-def get_index(items: List[str]) -> int:
+def get_index(items):
+    """Get the index of an item from the given list of items."""
     while True:
         try:
             index = int(input("> "))
@@ -59,8 +65,9 @@ def get_index(items: List[str]) -> int:
             print("Operation cancelled.")
             sys.exit()
 
-
+# Activity management functions.
 def get_activity():
+    """Get an activity name from configured activities in configuration file."""
     print("Choose an activity.")
     activities = sorted(load_activities().keys())
     for i, activity in enumerate(activities, start=1):
@@ -70,20 +77,35 @@ def get_activity():
 
 def get_criteria(activity):
     """Get criteria for an activity."""
-    print(f"Enter value for each criteria for {activity} activity.")
+    print(f"\nProvide criteria for {activity}.\n")
     while True:
         try:
             temp_min = int(input("Enter minimum temperature (°C): "))
             temp_max = int(input("Enter maximum temperature (°C): "))
             rain = float(input("Enter maximum rain (mm): "))
             wind_speed = float(input("Enter maximum wind speed (km/h): "))
-            print(f"""{activity} Criterias:   
-                "temp_min": {temp_min},
-                "temp_max": {temp_max},
-                "rain": {rain},
-                "wind_speed": {wind_speed}""")
-            if confirm("Done?"):
-                return {"temp_min": temp_min, "temp_max": temp_max, "rain": rain, "wind_speed": wind_speed}
+            time_range = None
+
+            if confirm("Is this a time-specific activity?"):
+                time_start = input("Enter start time (HH:MM, 24-hour format, e.g., 06:00): ").strip()
+                time_end = input("Enter end time (HH:MM, 24-hour format, e.g., 12:00): ").strip()
+                time_range = [time_start, time_end]
+
+            print(f"""{activity.capitalize()}
+            Criteria:   
+                    Temp: {temp_min}-{temp_max} °C
+                    Rain: {rain} mm
+                    Wind: {wind_speed} km/h,
+                    Time: {(time_range) if time_range else 'All Day'}""")
+            
+            if confirm("Save this criteria?"):
+                return {
+                    "temp_min": temp_min,
+                    "temp_max": temp_max,
+                    "rain": rain,
+                    "wind_speed": wind_speed,
+                    "time_range": time_range or ["00:00", "23:59"]
+                }
         except ValueError:
             print("Please enter a valid value.")
         except KeyboardInterrupt:
@@ -91,41 +113,39 @@ def get_criteria(activity):
             sys.exit(0)
 
 
-def view_activity_config():
+def view_activities():
     """View existing activity-criteria configurations."""
     activities = load_activities()
-    print("Existing activity-criteria configurations:\n")
+    print("\nExisting activity-criteria configurations:\n")
     for activity, criteria in activities.items():
         print(f"{activity.capitalize()}:")
         for k, v in criteria.items():
-            print(f"\t{k}: {v}")
+            print(f"\t{k}: {v} {UNITS.get(k,'')}")
 
 
 def add_activity():
     """Add new activity-criteria configuration."""
-    print("Adding new activity-criteria configuration...")
     activity = ""
     while not activity:
         activity = input("Enter activity name: ").lower().strip()
     criteria = get_criteria(activity)
-    if confirm("Save activity?"):
-        activities = load_activities()
-        activities[activity] = criteria
-        save_activity(activities)
-        print(f"{activity.capitalize()} activity added successfully.")
+    activities = load_activities()
+    activities[activity] = criteria
+    save_activity(activities)
+    print(f"\n{activity.capitalize()} activity added successfully.")
 
 
 def edit_activity():
     """Edit existing criteria for an activity."""
     activity = get_activity()
     activities = load_activities()
-    print(f"\nEditing criteria for {activity.capitalize()}...")
-    print(f"Current criteria for {activity.capitalize()}: {activities[activity]}\n")
+    criteria = activities[activity]
+    print(f"Current criteria for {activity.capitalize()}:")
+    for k, v in criteria.items():
+            print(f"\t{k}: {v} {UNITS.get(k,'')}")
     activities[activity] = get_criteria(activity)
-    print(f"New criterias for {activity}:\n {activities.get(activity)}")
-    if confirm("Save changes?"):
-        save_activity(activities)
-        print(f"Criterias for {activity.capitalize()} updated successfully.")
+    save_activity(activities)
+    print(f"Criteria for {activity.capitalize()} updated successfully.")
 
 
 def delete_activity():
@@ -136,7 +156,7 @@ def delete_activity():
     if confirm(f"Do you want to remove this activity? {activity}:  {activities[activity]}"):
         del activities[activity]
         save_activity(activities)
-        print(f"{activity.capitalize()} activity removed from activity-criteria configuration successfully.")
+        print(f"\n{activity.capitalize()} activity removed successfully.")
 
 
 def load_activities():
@@ -151,7 +171,7 @@ def load_activities():
 
 
 def save_activity(activities):
-    """Write back configured set of criteria for each activity."""
+    """Write configured set of criteria for each activityin configurationfile."""
     try:
         with open(CONFIG_FILE, "w") as f:
             json.dump(activities, f, indent=4)
@@ -176,82 +196,7 @@ def manage_activities():
         print("Operation cancelled.")
         sys.exit()
 
-
-def main_menu():
-    """Display the main options and let user choose one to execute the corresponding function."""
-    print("\nMAIN OPTIONS")
-    print("--------------------------------")
-    for index, action in enumerate(MAIN_OPTIONS, start=1):
-        print(f"{index}. {list(action)[0]}")
-
-    return list(MAIN_OPTIONS[get_index(MAIN_OPTIONS)].values())[0]
-
-
-def view_5day():
-    """Display 5-day weather Forecast for a chosen location."""
-    location_name, (lat, lon) = get_coordinates()
-    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
-    daily_weather = parse_weather_data(raw_data)
-
-    print("\n5-Day Forecast:")
-    display_grouped_forecast(daily_weather, forecast_type="daily")
-    
-    if confirm("\nSave Weather Forecast to file?"):
-        save_weather_to_file(location_name, daily_weather)
-
-
-def view_best_activity_day():
-    """View best day/s for an activity in a chosen location."""
-    activity = get_activity()
-    location_name, (lat, lon) = get_coordinates()
-    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
-    daily_weather = parse_weather_data(raw_data)
-    best_activity_days = filter_best_days(daily_weather, activity)
-
-    print(f"\nBest Days for {activity.capitalize()}:")
-    display_grouped_forecast(best_activity_days, forecast_type="daily")
-    
-    if confirm("\nSave Weather Forecast to file?"):
-        save_weather_to_file(location_name, best_activity_days, activity, best_activity_days=True)
-
-
-def view_current():
-    """View current weather forecast for chosen location."""
-    location_name, (lat, lon) = get_coordinates()
-    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="current")
-    current_weather = parse_weather_data(raw_data, forecast_type="current")
-    print("\nCurrent Weather:")
-    print(f"Date: {current_weather['date']}, Temp: {current_weather['temp']}°C, Weather: {current_weather['weather'].capitalize()}, "
-        f"Wind: {current_weather['wind_speed']:.2f} km/h, Rain: {current_weather['rain']} mm")
-
-
-def view_hourly():
-    """View hourly forecast for a chosen location."""
-    location_name, (lat, lon) = get_coordinates()
-    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
-    hourly_weather = parse_weather_data(raw_data, forecast_type="hourly")
-
-    print("\nHourly Forecast (Next 24 Hours):")
-    display_grouped_forecast(hourly_weather, forecast_type="hourly")
-
-
-def view_certain_day():
-    """View forecast for a certain day for the chosen location."""
-    location_name, (lat, lon) = get_coordinates()
-    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
-    daily_weather = parse_weather_data(raw_data)
-    selected_date = choose_day(daily_weather)
-    if selected_date:
-        hourly_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
-        hourly_weather = parse_weather_data(hourly_data, forecast_type="hourly")
-
-        print(f"\nHourly Forecast for {selected_date}:")
-        display_grouped_forecast(
-                    [hour for hour in hourly_weather if hour['date'].startswith(selected_date)],
-                    forecast_type="hourly"
-                )
-
-
+# Weather functions.
 def get_coordinates():
     """Prompt the user to choose a coordinate."""
     print("Select a location:")
@@ -269,32 +214,20 @@ def choose_day(daily_weather):
     print("\nSelect a day for details:")
     for index, day in enumerate(daily_weather, start=1):
         print(f"{index}. {day['date']} - Temp: {day['temp']}°C, Weather: {day['weather'].capitalize()}")
-    
+
     index = get_index([day['date'] for day in daily_weather])
-    selected_day = daily_weather[index]
-    print(f"\nDetails for {selected_day['date']}:")
-    print(f"Temperature: {selected_day['temp']}°C")
-    print(f"Weather: {selected_day['weather'].capitalize()}")
-    print(f"Wind Speed: {selected_day['wind_speed']:.2f} km/h")
-    print(f"Rain: {selected_day['rain']} mm")
-    
-    if confirm("\nDo you want to see the hourly forecast for this day?"):
-        return selected_day['date']
-    return None
+    return daily_weather[index]
 
 
 def fetch_weather_data(lat, lon, api_key, forecast_type="5-day"):
     """Fetch weather data from OpenWeatherMap API."""
-    if forecast_type == "5-day" or forecast_type == "hourly":
-        url = f"http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric"
-    elif forecast_type == "current":
-        url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
-    else:
-        print("Invalid forecast type!")
-        sys.exit(1)
-    
+    urls = {
+        "5-day": f"http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric",
+        "hourly": f"http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric",
+        "current": f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
+    }
     try:
-        response = requests.get(url)
+        response = requests.get(urls[forecast_type])
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -341,25 +274,53 @@ def parse_weather_data(data, forecast_type="5-day"):
     return daily_weather
 
 
-def filter_best_days(daily_weather, activity):
+def filter_best_days(daily_weather, activity, hourly_weather):
     """Filter and rank days with the best weather for an activity."""
     criteria = load_activities().get(activity, {})
+    time_range = criteria.get("time_range", ["00:00", "23:59"])
+
+    if time_range != ["00:00", "23:59"]:
+        def is_within_time_range(hour_entry):
+            time = datetime.strptime(hour_entry["date"].split(" ")[1], "%H:%M:%S").time()
+            return datetime.strptime(time_range[0], "%H:%M").time() <= time <= datetime.strptime(time_range[1], "%H:%M").time()
+
+        hourly_within_range = [hour for hour in hourly_weather if is_within_time_range(hour)]
+        daily_summary = defaultdict(list)
+
+        for hour in hourly_within_range:
+            date = hour["date"].split(" ")[0]
+            daily_summary[date].append(hour)
+
+        best_days = []
+        for date, hours in daily_summary.items():
+            avg_temp = sum(h["temp"] for h in hours) / len(hours)
+            total_rain = sum(h["rain"] for h in hours)
+            max_wind = max(h["wind_speed"] for h in hours)
+            weather = hours[0]["weather"]  # Use the first hour's weather as a summary
+
+            if criteria["temp_min"] <= avg_temp <= criteria["temp_max"] and total_rain <= criteria["rain"] and max_wind <= criteria["wind_speed"]:
+                best_days.append({
+                    "date": date,
+                    "temp": avg_temp,
+                    "rain": total_rain,
+                    "wind_speed": max_wind,
+                    "weather": weather,
+                    "hours": hours
+                })
+
+        return sorted(best_days, key=lambda x: (abs((criteria["temp_min"] + criteria["temp_max"]) / 2 - x["temp"]), x["rain"], x["wind_speed"]))
+
     best_days = [
         day for day in daily_weather
         if criteria["temp_min"] <= day['temp'] <= criteria["temp_max"]
         and day['rain'] <= criteria["rain"]
         and day['wind_speed'] <= criteria["wind_speed"]
     ]
-    return sorted(
-        best_days,
-        key=lambda x: (abs((criteria["temp_min"] + criteria["temp_max"]) / 2 - x['temp']), x['rain'], x['wind_speed'])
-    )[:5]
 
+    return sorted(best_days, key=lambda x: (abs((criteria["temp_min"] + criteria["temp_max"]) / 2 - x['temp']), x['rain'], x['wind_speed']))[:5]
 
 def display_grouped_forecast(forecast_data, forecast_type="daily"):
-    """
-    Display grouped forecast data for daily or hourly types.
-    """
+    """Display grouped forecast data for daily or hourly types."""
     grouped_forecast = defaultdict(list)
 
     # Group data by date
@@ -368,7 +329,7 @@ def display_grouped_forecast(forecast_data, forecast_type="daily"):
         grouped_forecast[date].append({
             "time": time,
             "temp": entry['temp'],
-            "weather": entry['weather'].capitalize(),
+            "weather": entry.get('weather', '').capitalize(),  # Handle missing weather key
             "wind_speed": entry['wind_speed'],
             "rain": entry['rain']
         })
@@ -381,14 +342,14 @@ def display_grouped_forecast(forecast_data, forecast_type="daily"):
         avg_temp = sum(e['temp'] for e in entries) / len(entries)
         total_rain = sum(e['rain'] for e in entries)
         max_wind = max(e['wind_speed'] for e in entries)
-        
-        print(f"  Summary: Avg Temp: {avg_temp:.2f}°C, Total Rain: {total_rain:.2f} mm, Max Wind: {max_wind:.2f} km/h")
+        weather_summary = entries[0]['weather'] if entries else "Unknown"
+
+        print(f"  Summary: Avg Temp: {avg_temp:.2f}°C, Total Rain: {total_rain:.2f} mm, Max Wind: {max_wind:.2f} km/h, Weather: {weather_summary}")
 
         for entry in entries:
             time_info = f"Time: {entry['time']}, " if entry['time'] else ""
             print(f"  {time_info}Temp: {entry['temp']}°C, Weather: {entry['weather']}, "
                   f"Wind: {entry['wind_speed']:.2f} km/h, Rain: {entry['rain']} mm")
-
 
 def save_weather_to_file(location_name, weather_days, activity=None, best_activity_days=False):
     """Save the weather forecast and best days to a file."""
@@ -403,14 +364,111 @@ def save_weather_to_file(location_name, weather_days, activity=None, best_activi
     print(f"Weather forecast saved to '{forecast_file}'")
 
 
+def view_5day():
+    """Display 5-day weather Forecast for a chosen location."""
+    location_name, (lat, lon) = get_coordinates()
+    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
+    daily_weather = parse_weather_data(raw_data)
+
+    print("\n5-Day Forecast:")
+    display_grouped_forecast(daily_weather, forecast_type="daily")
+    
+    if confirm("\nSave Weather Forecast to file?"):
+        save_weather_to_file(location_name, daily_weather)
+
+
+def view_best_activity_day():
+    """View best day(s) for an activity in a chosen location."""
+    activity = get_activity()
+    location_name, (lat, lon) = get_coordinates()
+    
+    # Fetch daily and hourly weather data
+    raw_daily_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
+    daily_weather = parse_weather_data(raw_daily_data)
+    
+    raw_hourly_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
+    hourly_weather = parse_weather_data(raw_hourly_data, forecast_type="hourly")
+    
+    # Get the best days for the activity.
+    best_activity_days = filter_best_days(daily_weather, activity, hourly_weather)
+    
+    # Display the results if theres a good day for activity.
+    if best_activity_days:
+        print(f"\nBest Days for {activity.capitalize()}:")
+        display_grouped_forecast(best_activity_days, forecast_type="daily")
+    
+    # Save to file if the user confirms
+    if best_activity_days and confirm("\nSave Weather Forecast to file?"):
+        save_weather_to_file(location_name, best_activity_days, activity, best_activity_days=True)
+    else:
+        print(f"There's no good {activity} weather for now.")
+
+
+def view_current():
+    """View current weather forecast for chosen location."""
+    location_name, (lat, lon) = get_coordinates()
+    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="current")
+    current_weather = parse_weather_data(raw_data, forecast_type="current")
+    print("\nCurrent Weather:")
+    print(f"Date: {current_weather['date']}, Temp: {current_weather['temp']}°C, Weather: {current_weather['weather'].capitalize()}, "
+        f"Wind: {current_weather['wind_speed']:.2f} km/h, Rain: {current_weather['rain']} mm")
+
+
+def view_hourly():
+    """View hourly forecast for a chosen location."""
+    location_name, (lat, lon) = get_coordinates()
+    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
+    hourly_weather = parse_weather_data(raw_data, forecast_type="hourly")
+
+    print("\nHourly Forecast (Next 24 Hours):")
+    display_grouped_forecast(hourly_weather, forecast_type="hourly")
+
+
+def view_certain_day():
+    """View forecast for a certain day for the chosen location."""
+    location_name, (lat, lon) = get_coordinates()
+    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
+    daily_weather = parse_weather_data(raw_data)
+    selected_day = choose_day(daily_weather)
+    
+    print(f"\nDetails for {selected_day['date']}:")
+    print(f"Temperature: {selected_day['temp']}°C")
+    print(f"Weather: {selected_day['weather'].capitalize()}")
+    print(f"Wind Speed: {selected_day['wind_speed']:.2f} km/h")
+    print(f"Rain: {selected_day['rain']} mm")
+    
+    if confirm("\nDo you want to see the hourly forecast for this day?"):
+        hourly_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
+        hourly_weather = parse_weather_data(hourly_data, forecast_type="hourly")
+
+        # Extract date string for filtering
+        selected_date = selected_day['date']
+
+        print(f"\nHourly Forecast for {selected_date}:")
+        display_grouped_forecast(
+            [hour for hour in hourly_weather if hour['date'].startswith(selected_date)],
+            forecast_type="hourly"
+        )
+
+
+def menu():
+    """Display the main options and let user choose one to execute the corresponding function."""
+    print("\nOPTIONS")
+    print("--------------------------------")
+    for index, action in enumerate(MAIN_OPTIONS, start=1):
+        print(f"{index}. {list(action)[0]}")
+
+    action = list(MAIN_OPTIONS[get_index(MAIN_OPTIONS)].values())[0]
+    if action is None:  # Exit
+        print("Goodbye!")
+        sys.exit()
+    action()
+
+
 def main():
     print("\nWelcome to CLI Weather Assistant!")
     while True:
-        choice = main_menu()
-        if choice is None:  # Exit
-            print("Goodbye!")
-            sys.exit()
-        choice()
+        menu()
 
 
 if __name__ == "__main__":

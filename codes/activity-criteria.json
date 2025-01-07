@@ -2,13 +2,43 @@
     "farming": {
         "temp_min": 19,
         "temp_max": 30,
-        "rain": 5,
-        "wind_speed": 20
+        "rain": 1.5,
+        "wind_speed": 15.0
     },
     "fishing": {
         "temp_min": 19,
         "temp_max": 30,
         "rain": 1.5,
         "wind_speed": 13.0
+    },
+    "afternoon walk": {
+        "temp_min": 19,
+        "temp_max": 30,
+        "rain": 0.0,
+        "wind_speed": 10.0,
+        "time_range": [
+            "16:00",
+            "18:00"
+        ]
+    },
+    "morning walk": {
+        "temp_min": 18,
+        "temp_max": 30,
+        "rain": 5.0,
+        "wind_speed": 50.0,
+        "time_range": [
+            "05:00",
+            "09:00"
+        ]
+    },
+    "kite flying": {
+        "temp_min": 19,
+        "temp_max": 30,
+        "rain": 0.0,
+        "wind_speed": 20.0,
+        "time_range": [
+            "00:00",
+            "23:59"
+        ]
     }
 }
