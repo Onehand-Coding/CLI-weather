@@ -1,7 +1,13 @@
 certifi==2024.12.14
 charset-normalizer==3.4.1
+click==8.1.8
+decorator==5.1.1
+future==1.0.0
+geocoder==1.38.1
 idna==3.10
 python-dotenv==1.0.1
+ratelim==0.1.6
 requests==2.32.3
+six==1.17.0
 tzdata==2024.2
 urllib3==2.3.0

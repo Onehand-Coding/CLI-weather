@@ -1,44 +1,52 @@
 {
-    "farming": {
-        "temp_min": 19,
-        "temp_max": 30,
-        "rain": 1.5,
-        "wind_speed": 15.0
+    "activities": {
+        "farming": {
+            "temp_min": 19,
+            "temp_max": 30,
+            "rain": 1.0,
+            "wind_min": 0,
+            "wind_max": 15.0,
+            "time_range": [
+                "00:00",
+                "23:59"
+            ]
+        },
+        "fishing": {
+            "temp_min": 19,
+            "temp_max": 30,
+            "rain": 1.0,
+            "wind_min": 0,
+            "wind_max": 15.0,
+            "time_range": [
+                "00:00",
+                "23:59"
+            ]
+        },
+        "kite flying": {
+            "temp_min": 19,
+            "temp_max": 30,
+            "rain": 0.0,
+            "wind_min": 15.0,
+            "wind_max": 30.0,
+            "time_range": [
+                "00:00",
+                "23:59"
+            ]
+        },
+        "morning walk": {
+            "temp_min": 18,
+            "temp_max": 30,
+            "rain": 0.0,
+            "wind_min": 0,
+            "wind_max": 10.0,
+            "time_range": [
+                "05:00",
+                "08:00"
+            ]
+        }
     },
-    "fishing": {
-        "temp_min": 19,
-        "temp_max": 30,
-        "rain": 1.5,
-        "wind_speed": 13.0
-    },
-    "afternoon walk": {
-        "temp_min": 19,
-        "temp_max": 30,
-        "rain": 0.0,
-        "wind_speed": 10.0,
-        "time_range": [
-            "16:00",
-            "18:00"
-        ]
-    },
-    "morning walk": {
-        "temp_min": 18,
-        "temp_max": 30,
-        "rain": 5.0,
-        "wind_speed": 50.0,
-        "time_range": [
-            "05:00",
-            "09:00"
-        ]
-    },
-    "kite flying": {
-        "temp_min": 19,
-        "temp_max": 30,
-        "rain": 0.0,
-        "wind_speed": 20.0,
-        "time_range": [
-            "00:00",
-            "23:59"
-        ]
+    "locations": {
+        "fishing ground": "17.5139289, 122.3584645",
+        "sta. Ana": "18.5342484, 122.183617"
     }
 }

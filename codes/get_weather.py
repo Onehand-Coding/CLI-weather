@@ -10,10 +10,9 @@ from dotenv import dotenv_values
 
 # Load environment variables
 VARS = dotenv_values()
-API_KEY = VARS["API_KEY"]
+API_KEY = VARS["OWM_API_KEY"]
 LOCAL_TIMEZONE = VARS['TZ']
-COORDINATE_KEYS = [key for key in VARS if key not in {"API_KEY", "TZ"}]
-CONFIG_FILE = Path(__file__).parent / "activity-criteria.json"
+CONFIG_FILE = Path(__file__).parent / "config.json"
 
 MAIN_OPTIONS = [
     {"View Current Weather": lambda: view_current()},
@@ -21,23 +20,33 @@ MAIN_OPTIONS = [
     {"View 5-Day Forecast": lambda: view_5day()},
     {"View Forecast for a Certain Day": lambda: view_certain_day()},
     {"View Best Day(s) for an Activity": lambda: view_best_activity_day()},
-    {"Manage Activities": lambda: manage_activities()},
+    {"Settings": lambda: manage_options(SETTING_OPTIONS, "Settings")},
     {"Exit": None}
 ]
-
-CUSTOMIZE_CRITERIA_OPTIONS = [
+LOCATION_OPTIONS = [
+    {"View locations": lambda : view_locations()},
+    {"Add a location": lambda : add_location()},
+    {"Delete a location": lambda : delete_location()},
+    {"Back": None}
+]
+ACTIVITY_OPTIONS = [
     {"View Activities": lambda: view_activities()},
     {"Add Activity": lambda: add_activity()},
     {"Edit Activity": lambda: edit_activity()},
     {"Delete Activity": lambda: delete_activity()},
-    {"Back to Main Menu": None}
+    {"Back": None}
 ]
-UNITS = {  # Units used when display criteria. 
+SETTING_OPTIONS = [
+    {"Manage Activities": lambda: manage_options(ACTIVITY_OPTIONS, "Manage Activities")},
+    {"Manage Locations": lambda : manage_options(LOCATION_OPTIONS, "Manage Locations")},
+    {"Back": None}]
+UNITS = {  # Units used when displaying criteria. 
     "rain": "mm",
     "temp_min": "°C",
     "temp_max": "°C",
     "wind_speed": "km/h"
 }
+
 
 # Helper functions.
 def confirm(prompt):
@@ -65,18 +74,40 @@ def get_index(items):
             print("Operation cancelled.")
             sys.exit()
 
+
+def load_config():
+    try:
+        with open(CONFIG_FILE, encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Failed to load configurarion file: {e}")
+        return {}
+
+
+def manage_options(options, prompt="", main=False):
+    """Let user configure items for locations or activities."""
+    try:
+        while True:
+            print(f"\n{prompt}")
+            print("--------------------------------")
+            for index, option in enumerate(options, start=1):
+                print(f"{index}. {list(option)[0]}")
+            index = get_index(list(options))
+            func = list(options[index].values())[0]
+            if main and func is None:
+                print("Goodbye!")
+                sys.exit()
+            if func is None:
+                break
+            func()
+    except KeyboardInterrupt:
+        print("Operation cancelled.")
+        sys.exit()
+
+
 # Activity management functions.
-def get_activity():
-    """Get an activity name from configured activities in configuration file."""
-    print("Choose an activity.")
-    activities = sorted(load_activities().keys())
-    for i, activity in enumerate(activities, start=1):
-        print(i, activity.capitalize())
-    return activities[get_index(activities)]
-
-
 def get_criteria(activity):
-    """Get criteria for an activity."""
+    """Get user criteria for an activity."""
     print(f"\nProvide criteria for {activity}.\n")
     while True:
         try:
@@ -90,20 +121,22 @@ def get_criteria(activity):
             if confirm("Does this activity require a minimum wind speed?"):
                 wind_min = float(input("Enter minimum wind speed (km/h): "))
 
+            else:
+                wind_min = 0  # Default value if not specified
+
             time_range = None
             if confirm("Is this a time-specific activity?"):
                 time_start = input("Enter start time (HH:MM, 24-hour format, e.g., 06:00): ").strip()
                 time_end = input("Enter end time (HH:MM, 24-hour format, e.g., 12:00): ").strip()
                 time_range = [time_start, time_end]
 
-            print(f"""{activity.capitalize()}
-            Criteria:   
+            print(f"""{activity.capitalize()} Criteria:   
                     Temp: {temp_min}-{temp_max} °C
                     Rain: {rain} mm
                     Wind: {wind_min or 'N/A'}-{wind_max} km/h,
                     Time: {(time_range) if time_range else 'All Day'}""")
             
-            if confirm("Save this criteria?"):
+            if confirm("Done?"):
                 return {
                     "temp_min": temp_min,
                     "temp_max": temp_max,
@@ -119,10 +152,26 @@ def get_criteria(activity):
             sys.exit(0)
 
 
+def choose_activity(task="Choose"):
+    """Get an activity name from configured activities in configuration file."""
+    config = load_config()
+    activities = config.get("activities", {})
+    if not activities:
+        print("No activities found. Please add an activity first.")
+        return None
+
+    print(f"Choose an activity to {task}.")
+    for i, activity in enumerate(sorted(activities.keys()), start=1):
+        print(f"{i}. {activity.capitalize()}") # Added index to output
+
+    activity_name = list(activities.keys())[get_index(list(activities))]
+    return activity_name
+
+
 def view_activities():
     """View existing activity-criteria configurations."""
-    activities = load_activities()
-    print("\nExisting activity-criteria configurations:\n")
+    activities = load_config()["activities"]
+    print("\nYour Activities:\n")
     for activity, criteria in activities.items():
         print(f"{activity.capitalize()}:")
         for k, v in criteria.items():
@@ -131,90 +180,153 @@ def view_activities():
 
 def add_activity():
     """Add new activity-criteria configuration."""
-    activity = ""
-    while not activity:
-        activity = input("Enter activity name: ").lower().strip()
-    criteria = get_criteria(activity)
-    activities = load_activities()
-    activities[activity] = criteria
-    save_activity(activities)
-    print(f"\n{activity.capitalize()} activity added successfully.")
+    activity_name = ""
+    while not activity_name:
+        activity_name = input("Enter activity name: ").lower().strip()
+    criteria = get_criteria(activity_name)
+    if confirm("Save activity?"):
+        save_activity(activity_name, criteria)
+        print(f"\n{activity_name.capitalize()} activity added successfully.")
 
 
 def edit_activity():
     """Edit existing criteria for an activity."""
-    activity = get_activity()
-    activities = load_activities()
-    criteria = activities[activity]
-    print(f"Current criteria for {activity.capitalize()}:")
-    for k, v in criteria.items():
+    activity_name = choose_activity("edit")
+    current_criteria = load_config()["activities"][activity_name]
+    print(f"Current criteria for {activity_name.capitalize()}:")
+    for k, v in current_criteria.items():
             print(f"\t{k}: {v} {UNITS.get(k,'')}")
-    activities[activity] = get_criteria(activity)
-    save_activity(activities)
-    print(f"Criteria for {activity.capitalize()} updated successfully.")
+    new_criteria = get_criteria(activity_name)
+    if confirm("Save changes?"):
+        save_activity(activity_name, new_criteria)
+        print(f"Criteria for {activity_name.capitalize()} updated successfully.")
 
 
 def delete_activity():
     """Let user remove an existing activity-criteria configuration."""
-    print("Choose activity to remove.")
-    activity = get_activity()
-    activities = load_activities()
+    activity = choose_activity("delete")
+    activities = load_config()["activities"]
     if confirm(f"Do you want to remove this activity? {activity}:  {activities[activity]}"):
         del activities[activity]
-        save_activity(activities)
+        #save_activity()
         print(f"\n{activity.capitalize()} activity removed successfully.")
 
 
-def load_activities():
-    """Load configuration file for activities."""
-    try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            activities = json.load(f)
-        return activities
-    except (json.JSONDecodeError, FileNotFoundError):
-        print("Failed to read or find the criteria configuration file.")
-        sys.exit(0)
-
-
-def save_activity(activities):
-    """Write configured set of criteria for each activityin configurationfile."""
+def save_activity(activity_name, criteria):
+    """Write configured set of criteria for each activity in configuration file."""
+    configuration = load_config()
+    configuration.setdefault("activities", {})[activity_name] = criteria
     try:
         with open(CONFIG_FILE, "w") as f:
-            json.dump(activities, f, indent=4)
+            json.dump(configuration, f, indent=4)
     except Exception as e:
         print(f"Unexpected error occurred: {e}")
 
 
-def manage_activities():
-    """Allow users to customize criteria for activities."""
+# Location management functions.
+def load_locations():
+    """Load combined sensitive and non sensitive location from environmentvariable and configuration file."""
+    sensitive_locations = {
+        key: value for key, value in VARS.items() 
+        if is_valid_location(value)
+    }
+    non_sensitive_locations = load_config()["locations"]
+    return {**sensitive_locations, **non_sensitive_locations}
+
+
+def save_location(location_name, coordinate):
+    """Write location info into configuration file."""
+    configuration = load_config()
+    configuration.setdefault("locations", {})[location_name] = coordinate
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(configuration, f, indent=4)
+    except Exception as e:
+        print(f"Unexpected error iccurred: {e}.")
+
+
+def is_valid_location(value):
+    """Check if a given value is a valid coordinate for location."""
+    try:
+        lat, lon = map(float, value.split(","))
+        return -90 <= lat <= 90 and -180 <= lon <= 180
+    except (ValueError, TypeError):
+        return False
+
+
+def get_location_input():
+    """Get location name and coordinate from user."""
     try:
         while True:
-            print("\nManage Activities.")
-            print("--------------------------------")
-            for index, option in enumerate(CUSTOMIZE_CRITERIA_OPTIONS, start=1):
-                print(f"{index}. {list(option)[0]}")
-            index = get_index(list(CUSTOMIZE_CRITERIA_OPTIONS))
-            activity_func = list(CUSTOMIZE_CRITERIA_OPTIONS[index].values())[0]
-            if activity_func is None:
-                break
-            activity_func()
+            location_name = input("Enter location name: ")
+            print("Enter comma separated coordinates Lat/Long (Deg). eg. 1.599, 12.6168")
+            coordinate = input("> ")
+            if is_valid_location(coordinate) and confirm("Done?"):
+                return (location_name, coordinate)
+    except KeyboardInterrupt:
+        print("Operarion cancelled.")
+        sys.exit(0)
+
+
+def add_location():
+    """Add non-sensitive location to configuration file."""
+    location_name, coordinate = get_location_input()
+    if confirm(f"Save {location_name}: {coordinate}?"):
+        save_location(location_name, coordinate)
+
+
+def view_locations():
+    """View non sensitive locations saved by the user."""
+    print("\nYour Locations:\n")
+    locations = load_config()["locations"]
+    for location_name, coordinate in locations.items():
+        lat, lon = coordinate.split(",")
+        print(f"""{location_name.capitalize()}:
+            latitude: {lat.strip()}
+            longitude: {lon}""")
+
+
+def delete_location():
+    """Let user remove a non sensitive location from configuration."""
+    config = load_config()
+    locations = config.get("locations", {})
+
+    if not locations:
+        print("There are no locations saved.")
+        return
+
+    print("\nChoose a location to delete:")
+    for index, location in enumerate(locations, 1):
+        print(f"{index}. {location}")
+    
+    try:
+        index = get_index(list(locations.keys()))  # Use keys for accurate index
+        location_to_delete = list(locations.keys())[index]
+
+        if confirm(f"Are you sure you want to delete '{location_to_delete}'?"):
+            del locations[location_to_delete]
+            config["locations"] = locations
+            with open(CONFIG_FILE, "w") as f:
+                json.dump(config, f, indent=4)
+            print(f"'{location_to_delete}' deleted successfully.")
+
     except KeyboardInterrupt:
         print("Operation cancelled.")
-        sys.exit()
 
-# Weather functions.
-def get_coordinates():
-    """Prompt the user to choose a coordinate."""
-    print("Select a location:")
-    for index, name in enumerate(COORDINATE_KEYS, start=1):
+
+def choose_location():
+    """Prompt the user to choose a location to be used in getting weather forecast."""
+    print("Choose a location:")
+    coordinates = load_locations()
+    for index, name in enumerate(coordinates, start=1):
         print(f"{index}. {name}")
     
-    index = get_index(COORDINATE_KEYS)
-    location_name = COORDINATE_KEYS[index]
-    lat, lon = VARS[location_name].split(",")
+    index = get_index(coordinates)
+    location_name = list(coordinates.keys())[index]
+    lat, lon = coordinates[location_name].split(",")
     return location_name, (lat.strip(), lon.strip())
 
-
+# Weather functions.
 def choose_day(daily_weather):
     """Allow the user to select a specific day for detailed weather or hourly forecast."""
     print("\nSelect a day for details:")
@@ -282,7 +394,7 @@ def parse_weather_data(data, forecast_type="5-day"):
 
 def filter_best_days(daily_weather, activity, hourly_weather):
     """Filter and rank days with the best weather for an activity."""
-    criteria = load_activities().get(activity, {})
+    criteria = load_config()["activities"].get(activity, {})
     time_range = criteria.get("time_range", ["00:00", "23:59"])
 
     # Handle time-specific activities
@@ -378,7 +490,7 @@ def save_weather_to_file(location_name, weather_days, activity=None, best_activi
 
 def view_5day():
     """Display 5-day weather Forecast for a chosen location."""
-    location_name, (lat, lon) = get_coordinates()
+    location_name, (lat, lon) = choose_location()
     raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
     daily_weather = parse_weather_data(raw_data)
 
@@ -391,8 +503,8 @@ def view_5day():
 
 def view_best_activity_day():
     """View best day(s) for an activity in a chosen location."""
-    activity = get_activity()
-    location_name, (lat, lon) = get_coordinates()
+    activity = choose_activity("check")
+    location_name, (lat, lon) = choose_location()
     
     # Fetch daily and hourly weather data
     raw_daily_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
@@ -418,7 +530,7 @@ def view_best_activity_day():
 
 def view_current():
     """View current weather forecast for chosen location."""
-    location_name, (lat, lon) = get_coordinates()
+    location_name, (lat, lon) = choose_location()
     raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="current")
     current_weather = parse_weather_data(raw_data, forecast_type="current")
     print("\nCurrent Weather:")
@@ -428,7 +540,7 @@ def view_current():
 
 def view_hourly():
     """View hourly forecast for a chosen location."""
-    location_name, (lat, lon) = get_coordinates()
+    location_name, (lat, lon) = choose_location()
     raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
     hourly_weather = parse_weather_data(raw_data, forecast_type="hourly")
 
@@ -438,7 +550,7 @@ def view_hourly():
 
 def view_certain_day():
     """View forecast for a certain day for the chosen location."""
-    location_name, (lat, lon) = get_coordinates()
+    location_name, (lat, lon) = choose_location()
     raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
     daily_weather = parse_weather_data(raw_data)
     selected_day = choose_day(daily_weather)
@@ -463,24 +575,12 @@ def view_certain_day():
         )
 
 
-def menu():
-    """Display the main options and let user choose one to execute the corresponding function."""
-    print("\nOPTIONS")
-    print("--------------------------------")
-    for index, action in enumerate(MAIN_OPTIONS, start=1):
-        print(f"{index}. {list(action)[0]}")
-
-    action = list(MAIN_OPTIONS[get_index(MAIN_OPTIONS)].values())[0]
-    if action is None:  # Exit
-        print("Goodbye!")
-        sys.exit()
-    action()
-
-
 def main():
     print("\nWelcome to CLI Weather Assistant!")
     while True:
-        menu()
+        print("\nOPTIONS")
+        print("--------------------------------")
+        manage_options(MAIN_OPTIONS, "MAIN OPTIONS", main=True)
 
 
 if __name__ == "__main__":
