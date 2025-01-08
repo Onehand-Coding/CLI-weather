@@ -40,11 +40,13 @@ SETTING_OPTIONS = [
     {"Manage Activities": lambda: manage_options(ACTIVITY_OPTIONS, "Manage Activities")},
     {"Manage Locations": lambda : manage_options(LOCATION_OPTIONS, "Manage Locations")},
     {"Back": None}]
-UNITS = {  # Units used when displaying criteria. 
-    "rain": "mm",
+UNITS = {
     "temp_min": "°C",
     "temp_max": "°C",
-    "wind_speed": "km/h"
+    "rain": "mm",
+    "wind_min": "km/h",
+    "wind_max": "km/h",
+    "time_range": ""
 }
 
 
@@ -174,8 +176,12 @@ def view_activities():
     print("\nYour Activities:\n")
     for activity, criteria in activities.items():
         print(f"{activity.capitalize()}:")
-        for k, v in criteria.items():
-            print(f"\t{k}: {v} {UNITS.get(k,'')}")
+        for key, value in criteria.items():
+            unit = UNITS.get(key, "")
+            if isinstance(value, list) and len(value) == 2:
+                print(f"  {key.replace('_', ' ').capitalize()}: {value[0]} to {value[1]} {unit}")
+            else:
+                print(f"  {key.replace('_', ' ').capitalize()}: {value} {unit}")
 
 
 def add_activity():
@@ -194,8 +200,13 @@ def edit_activity():
     activity_name = choose_activity("edit")
     current_criteria = load_config()["activities"][activity_name]
     print(f"Current criteria for {activity_name.capitalize()}:")
-    for k, v in current_criteria.items():
-            print(f"\t{k}: {v} {UNITS.get(k,'')}")
+    for key, value in current_criteria.items():
+        unit = UNITS.get(key, "")
+        if isinstance(value, list) and len(value) == 2:  # Handle range values like time_range
+            print(f"  {key.replace('_', ' ').capitalize()}: {value[0]} to {value[1]} {unit}")
+        else:
+            print(f"  {key.replace('_', ' ').capitalize()}: {value} {unit}")
+
     new_criteria = get_criteria(activity_name)
     if confirm("Save changes?"):
         save_activity(activity_name, new_criteria)

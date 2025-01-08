@@ -26,8 +26,8 @@
             "temp_min": 19,
             "temp_max": 30,
             "rain": 0.0,
-            "wind_min": 15.0,
-            "wind_max": 30.0,
+            "wind_min": 5.0,
+            "wind_max": 20.0,
             "time_range": [
                 "00:00",
                 "23:59"
