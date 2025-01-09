@@ -1,14 +1,14 @@
 {
     "activities": {
         "farming": {
-            "temp_min": 19,
+            "temp_min": 18,
             "temp_max": 30,
-            "rain": 1.0,
+            "rain": 1.5,
             "wind_min": 0,
             "wind_max": 15.0,
             "time_range": [
-                "00:00",
-                "23:59"
+                "05:00",
+                "17:00"
             ]
         },
         "fishing": {
@@ -36,28 +36,29 @@
         "morning walk": {
             "temp_min": 18,
             "temp_max": 30,
-            "rain": 0.0,
+            "rain": 1.0,
             "wind_min": 0,
-            "wind_max": 10.0,
+            "wind_max": 15.0,
             "time_range": [
                 "05:00",
                 "08:00"
             ]
         },
-        "test": {
-            "temp_min": 9,
-            "temp_max": 9,
-            "rain": 9.0,
+        "afternoon walk": {
+            "temp_min": 19,
+            "temp_max": 30,
+            "rain": 1.0,
             "wind_min": 0,
-            "wind_max": 9.0,
+            "wind_max": 15.0,
             "time_range": [
-                "00:00",
-                "23:59"
+                "16:00",
+                "18:00"
             ]
         }
     },
     "locations": {
         "fishing ground": "17.5139289, 122.3584645",
-        "sta. Ana": "18.5342484, 122.183617"
+        "sta. Ana": "18.5342484, 122.183617",
+        "Mabini": "15.0154915, 122.0130122"
     }
 }
