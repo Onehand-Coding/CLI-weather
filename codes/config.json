@@ -3,18 +3,18 @@
         "farming": {
             "temp_min": 18,
             "temp_max": 30,
-            "rain": 1.5,
+            "rain": 1.0,
             "wind_min": 0,
-            "wind_max": 15.0,
+            "wind_max": 20.0,
             "time_range": [
-                "05:00",
-                "17:00"
+                "00:00",
+                "23:59"
             ]
         },
         "fishing": {
-            "temp_min": 19,
+            "temp_min": 18,
             "temp_max": 30,
-            "rain": 1.0,
+            "rain": 1.5,
             "wind_min": 0,
             "wind_max": 15.0,
             "time_range": [
@@ -59,6 +59,9 @@
     "locations": {
         "fishing ground": "17.5139289, 122.3584645",
         "sta. Ana": "18.5342484, 122.183617",
-        "Mabini": "15.0154915, 122.0130122"
+        "Mabini": "15.0154915, 122.0130122",
+        "nestle pulilan": "14.9083495, 120.8246263026869",
+        "napa gapa": "14.2914464, 121.01781786214566",
+        "pacific synergy": "14.2060217, 121.1556496"
     }
 }

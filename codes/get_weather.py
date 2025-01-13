@@ -1,19 +1,27 @@
 #!/data/data/com.termux/files/home/coding/cli-weather/.venv/bin/python3
 import sys
+import time
 import json
+import logging
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from datetime import datetime, timezone
 from collections import defaultdict
+from datetime import datetime, timezone
 import geopy
 import requests
 from dotenv import dotenv_values
 from geopy.geocoders import Nominatim
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers =[logging.FileHandler(Path(__file__).parent / "weather_app.log", mode="w")]
+)
+
 # Load environment variables
 VARS = dotenv_values()
-API_KEY = VARS["OWM_API_KEY"]
-LOCAL_TIMEZONE = VARS['TZ']
+API_KEY = VARS.get("OWM_API_KEY")
+LOCAL_TIMEZONE = VARS.get('TZ', 'UTC')
 CONFIG_FILE = Path(__file__).parent / "config.json"
 FORECAST_FILE_PATH = Path.home() / "storage/shared/Download"
 
@@ -24,13 +32,14 @@ MAIN_OPTIONS = [
     {"View Forecast for a Certain Day": lambda: view_certain_day()},
     {"View Best Day(s) for an Activity": lambda: view_best_activity_day()},
     {"View Forecasts in Current Location": lambda : view_oncurrent_location()},
+    {"Track Typhoons": lambda: view_typhoon_tracker()},
     {"Other Options": lambda: run_menu(OTHER_OPTIONS, "OTHER OPTIONS")},
     {"Exit": None}
 ]
 LOCATION_OPTIONS = [
     {"View locations": lambda : view_locations()},
     {"Add a location": lambda : add_location()},
-    {"Add Current Location": lambda : save_current_location()},
+    {"Save Current Location": lambda : save_current_location()},
     {"Search a location": lambda
         : search_location()
     },
@@ -71,8 +80,7 @@ def confirm(prompt):
             choice = input(f"{prompt} (Y/n): ").lower()
         return choice in {"y", "yes"}
     except KeyboardInterrupt:
-        print("Operation cancelled by user.")
-        sys.exit(0)
+        raise
 
 
 def get_index(items):
@@ -85,32 +93,36 @@ def get_index(items):
         except ValueError:
             print("Please enter an integer.")
         except KeyboardInterrupt:
-            print("Operation cancelled.")
-            sys.exit()
+            raise
 
 
-def load_config():
+def load_configuration():
+    """Load the configurarion file to get data."""
     try:
         with open(CONFIG_FILE, encoding='utf-8') as f:
-            return json.load(f)
+            config = json.load(f)
+            logging.debug("Configuration loaded successfully.")
+            return config
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"Failed to load configurarion file: {e}")
-        return {}   
+        logging.error(f"Failed to load configuration file: {e}")
+        raise CLIWeatherException("Failed to load your configurations.")
 
 
-def save_data(data):
+def save_configuration(data):
     """Write data to configuration file."""
     try:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
+            logging.debug("Configuration saved successfully.")
     except (json.JSONDecodeError, FileNotFoundError,OSError) as e:
-        print(f"Error saving data to configurarion: {e}")
-    except Exception as e:
-        print(f"Unexpected error occurred: {e}")
+        logging.error(f"Error saving data to configuration: {e}")
+        raise CLIWeatherException("Error saving data to configuration.")
+    except Exception:
+        raise
 
 
 def run_menu(options, prompt="", main=False):
-    """Run menu to Let user choose and execute options."""
+    """Run menu to Let user choose and execute actions."""
     try:
         while True:
             print(f"\n{prompt}")
@@ -126,16 +138,22 @@ def run_menu(options, prompt="", main=False):
                 break
             func()
     except KeyboardInterrupt:
-        print("Operation cancelled.")
-        sys.exit()
+        raise
 
 
 # === Activity management functions === #
+def save_activity(activity_name, criteria):
+    """Write configured set of criteria for each activity in configuration file."""
+    configuration = load_configuration()
+    configuration.setdefault("activities", {})[activity_name] = criteria
+    save_configuration(configuration)
+
+
 def get_criteria(activity):
     """Get user criteria for an activity."""
     print(f"\nProvide criteria for {activity}.\n")
-    while True:
-        try:
+    try:
+        while True:
             temp_min = int(input("Enter minimum temperature (°C): "))
             temp_max = int(input("Enter maximum temperature (°C): "))
             rain = float(input("Enter maximum rain (mm): "))
@@ -167,16 +185,15 @@ def get_criteria(activity):
                     "wind_max": wind_max,  # Rename for clarity
                     "time_range": time_range or ["00:00", "23:59"]
                 }
-        except ValueError:
-            print("Please enter a valid value.")
-        except KeyboardInterrupt:
-            print("Operation cancelled.")
-            sys.exit(0)
+    except ValueError:
+        print("Please enter a valid value.")
+    except KeyboardInterrupt:
+        raise
 
 
 def choose_activity(task=None):
-    """Get an activity name from configured activities in configuration file."""
-    config = load_config()
+    """Let user choose an activity."""
+    config = load_configuration()
     activities = config.get("activities", {})
     if not activities:
         print("No activities found. Please add an activity first.")
@@ -193,7 +210,10 @@ def choose_activity(task=None):
 
 def view_activities():
     """View existing activity-criteria configurations."""
-    activities = load_config()["activities"]
+    activities = load_configuration()["activities"]
+    if not activities:
+        print("No activities found. Please add an activity first.")
+        return None
     print("\nYour Activities:\n")
     for activity, criteria in activities.items():
         print(f"\t{activity.title()}:")
@@ -219,7 +239,7 @@ def add_activity():
 def edit_activity():
     """Edit existing criteria for an activity."""
     activity_name = choose_activity("edit")
-    current_criteria = load_config()["activities"][activity_name]
+    current_criteria = load_configuration()["activities"][activity_name]
     print(f"Current criteria for {activity_name.title()}:")
     for key, value in current_criteria.items():
         unit = UNITS.get(key, "")
@@ -237,82 +257,25 @@ def edit_activity():
 def delete_activity():
     """Let user remove an existing activity-criteria configuration."""
     activity = choose_activity("remove")
-    config = load_config()
+    config = load_configuration()
     activities= config["activities"]
     if confirm(f"Do you want to remove this activity? {activity}:  {activities[activity]}"):
         del config["activities"][activity]
-        save_data(config)
+        save_configuration(config)
         print(f"\n{activity.title()} activity removed successfully.")
 
 
-def save_activity(activity_name, criteria):
-    """Write configured set of criteria for each activity in configuration file."""
-    configuration = load_config()
-    configuration.setdefault("activities", {})[activity_name] = criteria
-    save_data(configuration)
-
-
 # === Location management functions === #
-def get_location(addr="me"):
-    """ Get location by address using geopy."""
-    geopy.adapters.BaseAdapter.session = requests.Session()
-    try:
-        geolocator = Nominatim(user_agent="weather_assistant", timeout=10)
-        location = geolocator.geocode(addr)
-        if location:
-            return location.address, location.latitude, location.longitude, 
-        else:
-            return None, None, None
-    except Exception:
-        addr = "your current location" if addr == "me" else addr.title()
-        raise CLIWeatherException(f"Failed to locate  {addr}.")
-
-
-def search_location():
-    """Let user search for a location to save."""
-    try:
-        search_query = input("Enter location to search: ")
-        try:
-            address, lat, lon = get_location(search_query)
-        except CLIWeatherException as e:
-            print(f"{e}")
-            return
-
-        if all((address, lat, lon)):
-            print(f"Found: {address}")
-            if confirm("Save this location?"):
-                location_name = input("Enter a name for this location: ").strip() or address
-                save_location(location_name, f"{lat}, {lon}")  # Save using save_location
-                print(f"Location '{location_name}' saved successfully.")
-        else:
-            print("Location not found.")
-
-    except Exception as e:  # Handle potential geopy exceptions
-        print(f"Error searching for location: {e}")
-
-
-def load_locations(add_current=False, add_sensitive=False):
-    """Load combined sensitive, non sensitive, and current locations."""
-    non_sensitive_locations = load_config().get("locations", {})
+def load_locations(add_sensitive=False):
+    """Load combined sensitive, non sensitive."""
+    non_sensitive_locations = load_configuration().get("locations", {})
     sensitive_locations = {
-        key: value for key, value in VARS.items() 
+        key: value for key, value in VARS.items()
         if is_valid_location(value)
     }
     locations = {**sensitive_locations, **non_sensitive_locations} if add_sensitive else non_sensitive_locations
 
-    if add_current:
-        # Add current location to locations if possible.
-        _, lat, lon = get_location()
-        if  not any(coord is None for coord in {lat, lon}):
-            locations["Current Location"] = f"{str(lat)}, {str(lon)}"
     return locations
-
-
-def save_location(location_name, coordinate):
-    """Write location info into configuration file."""
-    configuration = load_config()
-    configuration.setdefault("locations", {})[location_name] = coordinate
-    save_data(configuration)
 
 
 def is_valid_location(value):
@@ -322,6 +285,65 @@ def is_valid_location(value):
         return -90 <= lat <= 90 and -180 <= lon <= 180
     except (ValueError, TypeError):
         return False
+
+
+def get_location(addr="me"):
+    """Get location by address or approximate current location."""
+    geopy.adapters.BaseAdapter.session = requests.Session()
+    
+    if addr.lower() == "me":  # Handle current location separately
+        logging.debug("Getting current location.")
+        try:
+            # Use IP-based geolocation to get approximate current location
+            ip_geolocation_url = "https://ipinfo.io/json"
+            response = requests.get(ip_geolocation_url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            lat, lon = map(float, data["loc"].split(","))
+            # Use reverse geocoding to refine location details
+            geolocator = Nominatim(user_agent="weather_assistant", timeout=10)
+            location = geolocator.reverse((lat, lon), exactly_one=True)
+            if location:
+                return location.address, lat, lon
+            else:
+                return "Approximate location based on IP", lat, lon
+        except requests.exceptions.Timeout as e:
+            logging.error(f"Error getting current location coordinate from IP, Connection timed out: {e}")
+            raise CLIWeatherException("Error getting your location, Request timed out. Please check your network connection.")
+        except requests.exceptions.ConnectionError as e:
+            logging.error(f"Error getting current location coordinate from IP, Connection error: {e}")
+            raise CLIWeatherException("Network error. Please check your connection and try again.")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error Getting coordinate using ip: {e}")
+            raise CLIWeatherException("Error Getting your location, Please try again later.")
+        except geopy.exc.GeocoderTimedOut as e:
+            logging.error(f"Error getting current location, Geocoding timed out: {e}")
+            raise CLIWeatherException("Error during location retrieval, geocoding timed out Please check your network connection.")
+        except geopy.exc.GeocoderUnavailable:
+            logging.error("Error getting current location, Geocoding service unavailable.")
+            raise CLIWeatherException("Geocoding service is unavailable. Please check your internet connection.")
+        except Exception:
+            raise
+
+    else:  # Use Geopy for address-based geocoding
+        logging.debug(f"Getting location for: {addr}")
+        try:
+            geolocator = Nominatim(user_agent="weather_assistant", timeout=10)
+            location = geolocator.geocode(addr)
+            if location:
+                return location.address, location.latitude, location.longitude
+            else:
+                logging.error(f"Geolocator could not find location: '{addr}'")
+                raise CLIWeatherException(f"Could not find location: '{addr}'")
+        except geopy.exc.GeocoderTimedOut as e:
+            logging.error(f"Geocoding timed out: {e}")
+            raise CLIWeatherException("Could not find location, Geocoding timed out.")
+        except geopy.exc.GeocoderUnavailable:
+            logging.error(f"Geolocator could not find location: {addr}. Geocoding service unavailable.")
+            raise CLIWeatherException("Geocoding service is unavailable. Please check your internet connection.")
+        except Exception:
+            raise
+    return None, None, None
 
 
 def get_location_input():
@@ -334,33 +356,46 @@ def get_location_input():
             if is_valid_location(coordinate) and confirm("Done?"):
                 return (location_name, coordinate)
     except KeyboardInterrupt:
-        print("Operarion cancelled.")
-        sys.exit(0)
+        raise
 
 
-def add_location():
-    """Add non-sensitive location to configuration file."""
-    location_name, coordinate = get_location_input()
-    if confirm(f"Save this location?\n {location_name}: {coordinate}"):
-        save_location(location_name, coordinate)
-        print(f"New location {location_name} saved successfully.")
+def save_location(location_name, coordinate):
+    """Write location info into configuration file."""
+    configuration = load_configuration()
+    configuration.setdefault("locations", {})[location_name] = coordinate
+    save_configuration(configuration)
 
 
-def save_current_location():
-    """Let user save current location."""
-    try:
-            current_addr, lat, lon = get_location()
+def choose_location(task="", add_sensitive=False):
+    """Prompt the user to choose a location."""
+    print(f"Choose a location {task}:")
+    coordinates = load_locations( add_sensitive)
+    for index, name in enumerate(coordinates, start=1):
+        print(f"{index}. {name.title()}")
+
+    index = get_index(coordinates)
+    location_name = list(coordinates.keys())[index]
+    lat, lon = coordinates[location_name].split(",")
+    return location_name, (lat.strip(), lon.strip())
+
+
+def search_location():
+    """Let user search location by address and save."""
+    search_query = input("Enter location to search: ")
+    try:  # Catching custom exception early here to prevent getting out of manage locations menu early.
+        address, lat, lon = get_location(search_query)
     except CLIWeatherException as e:
-            print(f"{e}")
-            return
-    print(f"Current location: {current_addr}:\n\tlatitude: {lat}, longitude: {lon}")
-    if confirm("Do you want to rename location address?"):
-        current_addr = input("Enter new name for this location: ")
-    if confirm("Save this location?"):
-        config = load_config()
-        config["locations"][current_addr] = f"{str(lat)}, {str(lon)}"
-        save_data(config)
-        print("Current location saved successfully.")
+        print(e)
+        return 
+
+    if all((address, lat, lon)):
+        print(f"Address found: {address}")
+        if confirm("Save this location?"):
+            location_name = input("Enter a name for this location: ").strip() or address
+            save_location(location_name, f"{lat}, {lon}")
+            print(f"Location '{location_name}' saved successfully.")
+    else:
+        print("Location not found.")
 
 
 def view_locations():
@@ -376,61 +411,72 @@ def view_locations():
             longitude: {lon}""")
 
 
+def add_location():
+    """Add non-sensitive location to configuration file."""
+    location_name, coordinate = get_location_input()
+    if confirm(f"Save this location?\n {location_name}: {coordinate}"):
+        save_location(location_name, coordinate)
+        print(f"New location {location_name} saved successfully.")
+
+
+def save_current_location():
+    """Let user save current location."""
+    try:  # Catching custom exception early here to prevent getting out of manage locations menu.
+        current_addr, lat, lon = get_location()
+    except CLIWeatherException as e:
+        print(e)
+        return
+
+    print(f"Current location: {current_addr}:\n\tlatitude: {lat}, longitude: {lon}")
+    if confirm("Do you want to rename location address?"):
+        current_addr = input("Enter new name for this location: ")
+    if confirm("Save this location?"):
+        config = load_configuration()
+        config["locations"][current_addr] = f"{str(lat)}, {str(lon)}"
+        save_configuration(config)
+        print("Current location saved successfully.")
+
+
 def delete_location():
     """Let user remove a non sensitive location from configuration."""
-    print("\nChoose a location to delete:")
-    location_to_delete, _ = choose_location("delete")
-    if confirm(f"Are you sure you want to delete '{location_to_delete}'?"):
-            config = load_config()
-            del config["locations"][location_to_delete]
-            save_data(config)
-            print(f"\n'{location_to_delete}' deleted successfully.")
-
-
-def choose_location(task="", add_current=False, add_sensitive=False):
-    """Prompt the user to choose a location to be used in getting weather forecast."""
-    print(f"Choose a location to {task}:")
-    coordinates = load_locations(add_current, add_sensitive)
-    for index, name in enumerate(coordinates, start=1):
-        print(f"{index}. {name.title()}")
-    
-    index = get_index(coordinates)
-    location_name = list(coordinates.keys())[index]
-    lat, lon = coordinates[location_name].split(",")
-    return location_name, (lat.strip(), lon.strip())
+    location_name, _ = choose_location(task="to delete")
+    if confirm(f"Are you sure you want to delete '{location_name}'?"):
+            config = load_configuration()
+            del config["locations"][location_name]
+            save_configuration(config)
+            print(f"\n'{location_name}' deleted successfully.")
 
 
 # == Weather functions == #
-def choose_day(daily_weather):
-    """Allow the user to select a specific day for detailed weather or hourly forecast."""
-    print("\nSelect a day for details:")
-    for index, day in enumerate(daily_weather, start=1):
-        print(f"{index}. {day['date']} - Temp: {day['temp']}°C, Weather: {day['weather'].title()}")
-
-    index = get_index([day['date'] for day in daily_weather])
-    return daily_weather[index]
-
-
 def fetch_weather_data(lat, lon, api_key, forecast_type="5-day"):
     """Fetch weather data from OpenWeatherMap API."""
     urls = {
-        "5-day": f"http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric",
-        "hourly": f"http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric",
-        "current": f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
+        "5-day": f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric",
+        "hourly": f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric",
+        "current": f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
     }
     try:
-        response = requests.get(urls[forecast_type])
+        logging.debug(f"Fetching weather data from: {urls[forecast_type]}")
+        response = requests.get(urls[forecast_type], timeout=10)
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.RequestException:
-        raise CLIWeatherException("Error! Fetching weather data. Please check your network connection.")
-    except Exception as e:
-        print(f"An unexpected error occurred! {e}")
-        sys.exit(1)
+    except requests.exceptions.Timeout as e:
+        logging.error(f"Error fetching weather data, connection timed out: {e}")
+        raise CLIWeatherException("Request timed out. Please check your network connection.")
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"Error fetching weather data, HTTP error occurred: {e.response.status_code} {e.response.reason}")
+        raise CLIWeatherException("Error fetching weather data HTTP error.")
+    except requests.exceptions.ConnectionError as e:
+        logging.error(f"Error fetching weather data, connection error: {e}")
+        raise CLIWeatherException("Network error. Please check your connection and try again.")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching weather data: {e}")
+        raise CLIWeatherException("Error fetching weather data, Please try again later.")
 
 
 def parse_weather_data(data, forecast_type="5-day"):
     """Parse weather data into a list of daily, hourly, or current summaries."""
+    logging.debug(f"Parsing weather data for forecast type: {forecast_type}")
     if forecast_type == "current":
         local_time = datetime.fromtimestamp(data['dt'], tz=ZoneInfo(LOCAL_TIMEZONE))
         return {
@@ -470,7 +516,8 @@ def parse_weather_data(data, forecast_type="5-day"):
 
 def filter_best_days(daily_weather, activity, hourly_weather):
     """Filter and rank days with the best weather for an activity."""
-    criteria = load_config()["activities"].get(activity, {})
+    logging.debug(f"Filtering best weather days for {activity}")
+    criteria = load_configuration()["activities"].get(activity, {})
     time_range = criteria.get("time_range", ["00:00", "23:59"])
 
     # Handle time-specific activities
@@ -492,6 +539,7 @@ def filter_best_days(daily_weather, activity, hourly_weather):
             total_rain = sum(h["rain"] for h in hours)
             max_wind = max(h["wind_speed"] for h in hours)
             min_wind = min(h["wind_speed"] for h in hours)
+            avg_wind = sum(float(i) for i in [min_wind, max_wind]) / 2
 
             # Check both wind_min and wind_max if applicable
             if (
@@ -504,11 +552,11 @@ def filter_best_days(daily_weather, activity, hourly_weather):
                     "date": date,
                     "temp": avg_temp,
                     "rain": total_rain,
-                    "wind_speed": (min_wind, max_wind),
+                    "wind_speed": avg_wind,
                     "hours": hours
                 })
 
-        return sorted(best_days, key=lambda x: (abs((criteria["temp_min"] + criteria["temp_max"]) / 2 - x["temp"]), x["rain"], x["wind_speed"][1]))
+        return sorted(best_days, key=lambda x: (abs((criteria["temp_min"] + criteria["temp_max"]) / 2 - x["temp"]), x["rain"], x["wind_speed"]))
 
     # Handle non-time-specific activities
     best_days = [
@@ -525,6 +573,7 @@ def filter_best_days(daily_weather, activity, hourly_weather):
 
 
 def display_grouped_forecast(forecast_data, forecast_type="daily"):
+    logging.debug("Displaying grouped forecast.")
     grouped_forecast = defaultdict(list)
 
     for entry in forecast_data:
@@ -532,7 +581,7 @@ def display_grouped_forecast(forecast_data, forecast_type="daily"):
         grouped_forecast[date].append({
             "time": time,
             "temp": entry['temp'],
-            "weather": entry['weather'].title(),
+            "weather": entry.get('weather', 'N/A').title(),
             "wind_speed": entry['wind_speed'],
             "rain": entry['rain']
         })
@@ -549,33 +598,29 @@ def display_grouped_forecast(forecast_data, forecast_type="daily"):
         
         for entry in entries:
             time_info = f"Time: {entry['time']}, " if entry['time'] else ""
-            print(f"  {time_info}Temp: {entry['temp']}°C, Weather: {entry['weather']}, "
+            print(f"  {time_info}Temp: {entry['temp']}°C, Weather: {entry.get('weather', 'N/A')}, "
                   f"Wind: {entry['wind_speed']:.2f} km/h, Rain: {entry['rain']} mm")
 
 
 def save_weather_to_file(location_name, weather_days, activity=None):
     """Save the weather forecast and best days to a file."""
-    forecast_file = FORECAST_FILE_PATH / f"{location_name}_weather.txt" if activity is None else FORECAST_FILE_PATH / f"{location_name}_{activity}_weather.txt"
+    forecast_file = FORECAST_FILE_PATH / f"{location_name}_{activity}_weather.txt" if activity is not None else FORECAST_FILE_PATH / f"{location_name}_weather.txt"
 
     with open(forecast_file, 'w') as file:
-        header = f"\nBest {activity.title()} Days:\n" if activity else "Weather Forecast:\n"
+        header = f"\nBest {activity.title()} Days:\n" if activity is not None else "Weather Forecast:\n"
         file.write(header)
         for day in weather_days:
-            file.write(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day['weather'].title()}, "
+            file.write(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day.get('weather', 'N/A').title()}, "
                        f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm\n")
     
-    confirm_message = f"Best Weather day(s) for {activity.title()} saved to '{forecast_file}'" if activity else f"Weather forecast saved to '{forecast_file}'"
+    confirm_message = f"Best Weather day(s) for {activity.title()} saved to '{forecast_file}'" if activity is not None else f"Weather forecast saved to '{forecast_file}'"
     print(confirm_message)
 
 
 def view_5day():
     """Display 5-day weather Forecast for a chosen location."""
-    location_name, (lat, lon) = choose_location("view the 5-day weather forecast", add_sensitive=True)
-    try:
-        raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
-    except CLIWeatherException as e:
-        print(e)
-        return
+    location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True)
+    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
     daily_weather = parse_weather_data(raw_data)
 
     print("\n5-Day Forecast:")
@@ -588,18 +633,14 @@ def view_5day():
 def view_best_activity_day():
     """View best day(s) for an activity in a chosen location."""
     activity = choose_activity("check")
-    location_name, (lat, lon) = choose_location(f"check best day(s) for {activity}", add_sensitive=True)
+    location_name, (lat, lon) = choose_location(task=f"to check best day(s) for {activity}", add_sensitive=True)
     
     # Fetch daily and hourly weather data
-    try:
-        raw_daily_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
-        daily_weather = parse_weather_data(raw_daily_data)
-        
-        raw_hourly_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
-        hourly_weather = parse_weather_data(raw_hourly_data, forecast_type="hourly")
-    except CLIWeatherException as e:
-        print(e)
-        return
+    raw_daily_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
+    daily_weather = parse_weather_data(raw_daily_data)
+
+    raw_hourly_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
+    hourly_weather = parse_weather_data(raw_hourly_data, forecast_type="hourly")
     
     # Get the best days for the activity.
     best_activity_days = filter_best_days(daily_weather, activity, hourly_weather)
@@ -611,47 +652,44 @@ def view_best_activity_day():
     
     # Save to file if the user confirms
     if best_activity_days and confirm("\nSave Weather Forecast to file?"):
-        save_weather_to_file(location_name, best_activity_days, activity, best_activity_days=True)
+        save_weather_to_file(location_name, best_activity_days, activity)
     else:
-        print(f"There's no good {activity} weather for now.")
+        print(f"\nThere's no good {activity} weather for now.\n")
 
 
 def view_current():
     """View current weather forecast for chosen location."""
-    location_name, (lat, lon) = choose_location("view the current weather", add_sensitive=True)
-    try:
-        raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="current")
-    except CLIWeatherException as e:
-        print(e)
-        return
+    location_name, (lat, lon) = choose_location(task="to view the current weather", add_sensitive=True)
+    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="current")
     current_weather = parse_weather_data(raw_data, forecast_type="current")
-    print("\nCurrent Weather:")
+    print(f"\nCurrent Weather in {location_name}:")
     print(f"Date: {current_weather['date']}, Temp: {current_weather['temp']}°C, Weather: {current_weather['weather'].title()}, "
         f"Wind: {current_weather['wind_speed']:.2f} km/h, Rain: {current_weather['rain']} mm")
 
 
 def view_hourly():
     """View hourly forecast for a chosen location."""
-    location_name, (lat, lon) = choose_location("view the hourly weather forecast from", add_sensitive=True)
-    try:
-        raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
-        hourly_weather = parse_weather_data(raw_data, forecast_type="hourly")
-    except CLIWeatherException as e:
-        print(e)
-        return
+    location_name, (lat, lon) = choose_location(task="to view the hourly weather forecast from", add_sensitive=True)
+    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="hourly")
+    hourly_weather = parse_weather_data(raw_data, forecast_type="hourly")
 
     print("\nHourly Forecast (Next 24 Hours):")
     display_grouped_forecast(hourly_weather, forecast_type="hourly")
 
 
 def view_certain_day():
-    """View forecast for a certain day for the chosen location."""
-    location_name, (lat, lon) = choose_location("view weather forecast for a certain day", add_sensitive=True)
-    try:
-        raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
-    except CLIWeatherException as e:
-        print(e)
-        return
+    """View forecast for a certain day in chosen location."""
+    def choose_day(daily_weather):
+        """Allow the user to select a specific day for detailed weather or hourly forecast."""
+        print("\nSelect a day for details:")
+        for index, day in enumerate(daily_weather, start=1):
+            print(f"{index}. {day['date']} - Temp: {day['temp']}°C, Weather: {day['weather'].title()}")
+
+        index = get_index([day['date'] for day in daily_weather])
+        return daily_weather[index]
+
+    location_name, (lat, lon) = choose_location(task="to view a certain day\'s weather forecast", add_sensitive=True)
+    raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type="5-day")
     daily_weather = parse_weather_data(raw_data)
     selected_day = choose_day(daily_weather)
     
@@ -677,7 +715,7 @@ def view_certain_day():
 
 def view_oncurrent_location():
     """View different weather forecasts on current location."""
-    def view_weather_for_coords(forecast_type, lat, lon):
+    def display_oncurrent(forecast_type, lat, lon):
         """Function to view forcast on current location."""
         raw_data = fetch_weather_data(lat, lon, API_KEY, forecast_type=forecast_type)
         if forecast_type == "current":
@@ -699,7 +737,7 @@ def view_oncurrent_location():
             location_name = f"location:{str(lat)},{str(lon)}"
             save_weather_to_file(location_name, weather_data)
 
-    def view_best_activity_day_for_coords(lat, lon):
+    def view_best_activity_day_oncurrent(lat, lon):
         """View best days for an activity for the current location."""
         activity = choose_activity("check")
          # Fetch daily and hourly weather data
@@ -719,14 +757,14 @@ def view_oncurrent_location():
         
         # Save to file if the user confirms. Indicate location in file name.
         if best_activity_days and confirm("\nSave Weather Forecast to file?"):
-            save_weather_to_file(f"Current_Location_{activity}", best_activity_days, activity, best_activity_days=True)
+            save_weather_to_file("Current_Location", best_activity_days, activity)
         else:
             print(f"There's no good {activity} weather for now at the current location.")
 
     #  Get the current location and run options to execute for this location.
     try:
-        _, lat, lon = get_location()
-        if any(coord is None for coord in {lat, lon}):
+        address, lat, lon = get_location()
+        if any(coord is None for coord in {address, lat, lon}):
             print("Could not determine current location.")
             return
     except CLIWeatherException as e:
@@ -734,24 +772,43 @@ def view_oncurrent_location():
         return
     
     options = [
-            {"View Current Weather": lambda: view_weather_for_coords("current", lat, lon)},
-            {"View Hourly Forecast": lambda: view_weather_for_coords("hourly", lat, lon)},
-            {"View 5-Day Forecast": lambda: view_weather_for_coords("5-day", lat, lon)},
-             {"View Best Day(s) for an Activity": lambda: view_best_activity_day_for_coords(lat, lon)},
+            {"View Current Weather": lambda: display_oncurrent("current", lat, lon)},
+            {"View Hourly Forecast": lambda: display_oncurrent("hourly", lat, lon)},
+            {"View 5-Day Forecast": lambda: display_oncurrent("5-day", lat, lon)},
+             {"View Best Day(s) for an Activity": lambda: view_best_activity_day_oncurrent(lat, lon)},
             {"Back": None}
         ]
 
     while True:
-        print("\nCurrent Location Weather Options:")
-        run_menu(options, "Choose an option:")
-        #if options[get_index(options)].get("Back") is None: # Check for the "Back" option
+        run_menu(options, f"Options for current location {address}:")
         break
+
+
+def fetch_typhoon_data(api_key):
+    """Fetch typhoon data from a suitable API."""
+
+
+def view_typhoon_tracker():
+    """View active typhoons and alerts for the chosen location."""
+    print("Not yet implimented.")
 
 
 def main():
     print("\nWelcome to CLI Weather Assistant!")
     while True:
-        run_menu(MAIN_OPTIONS, "MAIN OPTIONS", main=True)
+        try:
+            run_menu(MAIN_OPTIONS, "MAIN OPTIONS", main=True)
+        except CLIWeatherException as e:
+            print(e)
+        except KeyboardInterrupt:
+            print("\nExiting...")
+            time.sleep(0.5)
+            print("Goodbye!")
+            sys.exit()
+        except Exception as e:
+            logging.exception(f"An unexpected error occurred: {e}")
+            print("An unexpected error occurred.")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
