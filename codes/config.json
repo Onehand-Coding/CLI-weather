@@ -36,20 +36,20 @@
         "morning walk": {
             "temp_min": 18,
             "temp_max": 30,
-            "rain": 1.0,
+            "rain": 0.5,
             "wind_min": 0,
-            "wind_max": 15.0,
+            "wind_max": 10.0,
             "time_range": [
                 "05:00",
                 "08:00"
             ]
         },
         "afternoon walk": {
-            "temp_min": 19,
+            "temp_min": 18,
             "temp_max": 30,
-            "rain": 1.0,
+            "rain": 0.5,
             "wind_min": 0,
-            "wind_max": 15.0,
+            "wind_max": 10.0,
             "time_range": [
                 "16:00",
                 "18:00"
@@ -58,7 +58,6 @@
     },
     "locations": {
         "fishing ground": "17.5139289, 122.3584645",
-        "sta. Ana": "18.5342484, 122.183617",
         "Mabini": "15.0154915, 122.0130122",
         "nestle pulilan": "14.9083495, 120.8246263026869",
         "napa gapa": "14.2914464, 121.01781786214566",
