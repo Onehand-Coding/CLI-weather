@@ -9,17 +9,17 @@ setup(
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/Phoenix1025/CLI-weather",
-    packages=find_packages(),  # Automatically find all packages in cli_weather/
+    packages=find_packages(),
     install_requires=[
         "tzdata",
         "geopy",
         "requests",
         "python-dotenv"
-    ],  # Dependencies
-    python_requires=">=3.7",  # Minimum Python version
+    ],
+    python_requires=">=3.7",
     entry_points={
         "console_scripts": [
-            "cli-weather=cli_weather.main:main",  # CLI command.
+            "cli-weather=cli_weather.main:main",
         ]
     },
     classifiers=[

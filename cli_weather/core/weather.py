@@ -5,8 +5,8 @@ from zoneinfo import ZoneInfo
 from typing import List, Dict
 from collections import defaultdict
 import requests
-from .utils import CLIWeatherException, CacheManager, confirm, get_index, choose_local_path, run_menu
-from .config import API_KEY, LOCAL_TIMEZONE, load_config
+from ..utils import CLIWeatherException, CacheManager, confirm, get_index, choose_local_path, run_menu
+from ..config import API_KEY, LOCAL_TIMEZONE, load_config
 from .activity import choose_activity
 from .location import get_location, choose_location
 
@@ -208,6 +208,8 @@ def view_5day(cache: CacheManager) -> None:
     """Display 5-day weather Forecast for a chosen location."""
 
     location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True)
+    if location_name == "Back":
+        return
     logger.debug(f"viewing 5-day weather forecast in {location_name}...")
     raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
     daily_weather = parse_weather_data(raw_data)
@@ -222,7 +224,11 @@ def view_5day(cache: CacheManager) -> None:
 def view_best_activity_day(cache: CacheManager) -> None:
     """View best day(s) for an activity in a chosen location."""
     activity = choose_activity("check")
+    if activity == "Back":
+        return
     location_name, (lat, lon) = choose_location(task=f"to check best day(s) for {activity}", add_sensitive=True)
+    if location_name == "Back":
+        return
 
     # Fetch daily and hourly weather data
     logger.debug(f"viewing best activity days for {activity} in {location_name}...")
@@ -250,6 +256,8 @@ def view_best_activity_day(cache: CacheManager) -> None:
 def view_current(cache: CacheManager) -> None:
     """View current weather forecast for chosen location."""
     location_name, (lat, lon) = choose_location(task="to view the current weather", add_sensitive=True)
+    if location_name == "Back":
+        return
     logger.debug(f"Viewing current weather in {location_name}...")
     raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="current")
     current_weather = parse_weather_data(raw_data, forecast_type="current")
@@ -260,6 +268,8 @@ def view_current(cache: CacheManager) -> None:
 def view_hourly(cache: CacheManager) -> None:
     """View hourly forecast for a chosen location."""
     location_name, (lat, lon) = choose_location(task="to view the hourly weather forecast from", add_sensitive=True)
+    if location_name == "Back":
+        return
     logger.debug(f"viewing hourly weather forecast in {location_name}...")
     raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="hourly")
     hourly_weather = parse_weather_data(raw_data, forecast_type="hourly")
@@ -280,6 +290,8 @@ def view_certain_day(cache: CacheManager) -> None:
         return daily_weather[index]
 
     location_name, (lat, lon) = choose_location(task="to view a certain day\'s weather forecast", add_sensitive=True)
+    if location_name == "Back":
+        return
     raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
     daily_weather = parse_weather_data(raw_data)
     selected_day = choose_day(daily_weather)

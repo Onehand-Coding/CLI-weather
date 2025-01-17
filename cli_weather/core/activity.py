@@ -3,8 +3,8 @@ from typing import Dict, Tuple
 import requests
 import geopy
 from geopy.geocoders import Nominatim
-from .config import VARS, UNITS, load_config, save_config
-from .utils import CLIWeatherException, confirm, get_index
+from ..config import VARS, UNITS, load_config, save_config
+from ..utils import CLIWeatherException, confirm, get_index
 
 logger = logging.getLogger(__file__)
 
@@ -71,7 +71,8 @@ def choose_activity(task: str = None) -> str:
 
     prompt = f"Choose an activity to {task}." if task else "Choose an activity."
     print(prompt)
-    for i, activity in enumerate(activities.keys(), start=1):
+    activities.update({"Back": ""})
+    for i, activity in enumerate(activities, start=1):
         print(f"{i}. {activity.title()}") # Added index to output
 
     activity_name = list(activities.keys())[get_index(list(activities))]
@@ -109,6 +110,8 @@ def add_activity() -> None:
 def edit_activity() -> None:
     """Edit existing criteria for an activity."""
     activity_name = choose_activity("edit")
+    if activity_name == "Back":
+        return
     current_criteria = load_config()["activities"][activity_name]
     print(f"Current criteria for {activity_name.title()}:")
     for key, value in current_criteria.items():
@@ -126,10 +129,12 @@ def edit_activity() -> None:
 
 def delete_activity() -> None:
     """Let user remove an existing activity-criteria configuration."""
-    activity = choose_activity("remove")
+    activity_name = choose_activity("remove")
+    if activity_name == "Back":
+        return
     config = load_config()
     activities= config["activities"]
-    if confirm(f"Do you want to remove this activity? {activity}:  {activities[activity]}"):
-        del config["activities"][activity]
+    if confirm(f"Do you want to remove this activity? {activity_name}:  {activities[activity_name]}"):
+        del config["activities"][activity_name]
         save_config(config)
-        print(f"\n{activity.title()} activity removed successfully.")
+        print(f"\n{activity_name.title()} activity removed successfully.")

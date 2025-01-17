@@ -46,20 +46,20 @@ def configure_logging():
     logging.basicConfig(
     level=getattr(logging, LOG_LEVEL),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers =[RotatingFileHandler(LOG_DIR / "app.log", maxBytes=5 * 1024 * 1024, backupCount=3)]
+    handlers =[RotatingFileHandler(LOG_DIR / "weather_app.log", maxBytes=5 * 1024 * 1024, backupCount=3)]
 )
 
 
 def load_config() -> Dict:
     """Load the configuration file to get data."""
     try:
-        logging.debug("Loading configuration...")
+        logger.debug("Loading configuration...")
         with open(CONFIG_FILE, encoding='utf-8') as f:
             config = json.load(f)
-            logging.debug("Configuration loaded successfully.")
+            logger.debug("Configuration loaded successfully.")
             return config
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        logging.error(f"Failed to load configuration file: {e}")
+        logger.error(f"Failed to load configuration file: {e}")
         raise CLIWeatherException("Failed to load configuration file.")
 
 
@@ -69,9 +69,9 @@ def save_config(data: Dict) -> None:
         logging.debug("Saving configuration...")
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
-            logging.debug("Configuration saved successfully.")
+            logger.debug("Configuration saved successfully.")
     except (json.JSONDecodeError, FileNotFoundError,OSError) as e:
-        logging.error(f"Error saving data to configuration: {e}")
+        logger.error(f"Error saving data to configuration: {e}")
         raise CLIWeatherException("Error saving data to configuration.")
     except Exception:
         raise

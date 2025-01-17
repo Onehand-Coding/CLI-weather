@@ -3,4 +3,5 @@ data/
 logs/
 .venv/
 venv/
-.env
+.envbuild/
+cli_weather.egg-info/

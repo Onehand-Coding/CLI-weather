@@ -4,14 +4,14 @@ from typing import Dict, Tuple
 import requests
 import geopy
 from geopy.geocoders import Nominatim
-from .config import VARS, load_config, save_config
-from .utils import CLIWeatherException, confirm, get_index
+from ..config import VARS, load_config, save_config
+from ..utils import CLIWeatherException, confirm, get_index
 
 logger = logging.getLogger(__file__)
 
 # === Location management functions === #
 def load_locations(add_sensitive: bool = False) -> Dict:
-    """Load combined sensitive, non sensitive."""
+    """Load sensitive locations from .env and non sensitive from configuration."""
     logger.debug("Loading locations...")
     non_sensitive_locations = load_config().get("locations", {})
     sensitive_locations = {
@@ -119,6 +119,8 @@ def choose_location(task: str = "", add_sensitive: bool = False) -> Tuple[str, T
     """Prompt the user to choose a location."""
     print(f"\nChoose a location {task}:")
     coordinates = load_locations( add_sensitive)
+    #  Add choice to go back.
+    coordinates["Back"] = "N, A"
     for index, name in enumerate(coordinates, start=1):
         print(f"{index}. {name.title()}")
 
@@ -191,6 +193,9 @@ def save_current_location() -> None:
 def delete_location() -> None:
     """Let user remove a non sensitive location from configuration."""
     location_name, _ = choose_location(task="to delete")
+    # If user choose to abort deleting a location.
+    if location_name == "Back":
+        return
     if confirm(f"Are you sure you want to delete '{location_name}'?"):
             config = load_config()
             del config["locations"][location_name]
