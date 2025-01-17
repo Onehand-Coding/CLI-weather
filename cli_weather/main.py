@@ -4,11 +4,9 @@ import time
 import logging
 from .config import CACHED_DIR, LOG_DIR, CACHE_EXPIRY, configure_logging
 from .utils import CLIWeatherException, CacheManager, run_menu, clear_logs
-from .weather import view_current, view_hourly, view_5day, view_certain_day, view_best_activity_day, view_oncurrent_location, view_typhoon_tracker
-from .location import view_locations, add_location, save_current_location, search_location, delete_location
-from .activity import view_activities, add_activity, edit_activity, delete_activity
-
-
+from .core.weather import view_current, view_hourly, view_5day, view_certain_day, view_best_activity_day, view_oncurrent_location, view_typhoon_tracker
+from .core.location import view_locations, add_location, save_current_location, search_location, delete_location
+from .core.activity import view_activities, add_activity, edit_activity, delete_activity
 
 # Use caching when fetching weather data.
 cache_manager = CacheManager(CACHED_DIR, CACHE_EXPIRY)
@@ -22,6 +20,8 @@ MAIN_OPTIONS = [
     {"View Best Day(s) for an Activity": lambda: view_best_activity_day(cache_manager)},
     {"View Forecasts in Current Location": lambda: view_oncurrent_location(cache_manager)},
     {"Track Typhoons": lambda: view_typhoon_tracker()},
+    {"Manage Activities": lambda: run_menu(ACTIVITY_OPTIONS, "Manage Activities")},
+    {"Manage Locations": lambda : run_menu(LOCATION_OPTIONS, "Manage Locations")},
     {"Other Options": lambda: run_menu(OTHER_OPTIONS, "OTHER OPTIONS")},
     {"Exit": None}
 ]
@@ -41,8 +41,6 @@ ACTIVITY_OPTIONS = [
     {"Back": None}
 ]
 OTHER_OPTIONS = [
-    {"Manage Activities": lambda: run_menu(ACTIVITY_OPTIONS, "Manage Activities")},
-    {"Manage Locations": lambda : run_menu(LOCATION_OPTIONS, "Manage Locations")},
     {"Clear cached data": lambda: cache_manager.clear()},
     {"Clear logs": lambda: clear_logs(LOG_DIR)},
     {"Back": None}]
