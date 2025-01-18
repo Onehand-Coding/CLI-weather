@@ -59,8 +59,8 @@ def load_config() -> Dict:
             logger.debug("Configuration loaded successfully.")
             return config
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        logger.error(f"Failed to load configuration file: {e}")
-        raise CLIWeatherException("Failed to load configuration file.")
+        logger.error("Returning empty configuration, failed to load configuration.")
+        return {}
 
 
 def save_config(data: Dict) -> None:

@@ -196,7 +196,7 @@ def save_weather_to_file(location_name: str, weather_days: List[Dict], activity:
         header = f"\nBest {activity.title()} Days:\n" if activity is not None else "Weather Forecast:\n"
         file.write(header)
         for day in weather_days:
-            file.write(f"Date: {day['date']}, Temp: {day['temp']}°C, Weather: {day.get('weather', 'N/A').title()}, "
+            file.write(f"Date: {day['date']}, Temp: {day['temp']:.2f}°C, Weather: {day.get('weather', 'N/A').title()}, "
                        f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm\n")
 
     confirm_message = f"Best Weather day(s) for {activity.title()} saved to '{forecast_file}'" if activity is not None else f"Weather forecast saved to '{forecast_file}'"

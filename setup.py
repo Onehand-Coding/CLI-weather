@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cli-weather",
-    version="1.0.0",
+    version="0.1.0",
     author="Onehand Coding",
     author_email="onehand.coding433@gmail.com",
     description="A CLI weather application",

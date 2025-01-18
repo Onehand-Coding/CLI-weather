@@ -117,16 +117,19 @@ def save_location(location_name: str, coordinate: str) -> None:
 
 def choose_location(task: str = "", add_sensitive: bool = False) -> Tuple[str, Tuple[str, str]]:
     """Prompt the user to choose a location."""
-    print(f"\nChoose a location {task}:")
-    coordinates = load_locations( add_sensitive)
+    locations = load_locations( add_sensitive)
+    if not locations:
+        print("No locations found. Please add one first.")
+        return
     #  Add choice to go back.
-    coordinates["Back"] = "N, A"
-    for index, name in enumerate(coordinates, start=1):
+    locations["Back"] = "N, A"
+    print(f"\nChoose a location {task}:")
+    for index, name in enumerate(locations, start=1):
         print(f"{index}. {name.title()}")
 
-    index = get_index(coordinates)
-    location_name = list(coordinates.keys())[index]
-    lat, lon = coordinates[location_name].split(",")
+    index = get_index(locations)
+    location_name = list(locations.keys())[index]
+    lat, lon = locations[location_name].split(",")
     return location_name, (lat.strip(), lon.strip())
 
 
@@ -153,7 +156,7 @@ def view_locations() -> None:
     """View non sensitive locations saved by the user."""
     locations = load_locations()
     if not locations:
-        print("No locations foud. Please add one first.")
+        print("No locations found. Please add one first.")
         return
     print("\nYour Locations:\n")
     for location_name, coordinate in locations.items():
@@ -192,7 +195,10 @@ def save_current_location() -> None:
 
 def delete_location() -> None:
     """Let user remove a non sensitive location from configuration."""
-    location_name, _ = choose_location(task="to delete")
+    try:
+        location_name, _ = choose_location(task="to delete")
+    except TypeError:
+        return
     # If user choose to abort deleting a location.
     if location_name == "Back":
         return

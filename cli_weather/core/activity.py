@@ -66,12 +66,14 @@ def choose_activity(task: str = None) -> str:
     config = load_config()
     activities = config.get("activities", {})
     if not activities:
+        logger.error("Cannot choose activity, No activities configured.")
         print("No activities found. Please add an activity first.")
-        return None
+        return
 
     prompt = f"Choose an activity to {task}." if task else "Choose an activity."
     print(prompt)
-    activities.update({"Back": ""})
+    # Add option to go back.
+    activities["Back"] = ""
     for i, activity in enumerate(activities, start=1):
         print(f"{i}. {activity.title()}") # Added index to output
 
@@ -81,7 +83,7 @@ def choose_activity(task: str = None) -> str:
 
 def view_activities() -> None:
     """View existing activity-criteria configurations."""
-    activities = load_config()["activities"]
+    activities = load_config().get("activities", {})
     if not activities:
         print("No activities found. Please add an activity first.")
         return None
@@ -110,9 +112,11 @@ def add_activity() -> None:
 def edit_activity() -> None:
     """Edit existing criteria for an activity."""
     activity_name = choose_activity("edit")
+    if not activity_name:
+        return
     if activity_name == "Back":
         return
-    current_criteria = load_config()["activities"][activity_name]
+    current_criteria = load_config().get("activities", {})[activity_name]
     print(f"Current criteria for {activity_name.title()}:")
     for key, value in current_criteria.items():
         unit = UNITS.get(key, "")
@@ -130,10 +134,16 @@ def edit_activity() -> None:
 def delete_activity() -> None:
     """Let user remove an existing activity-criteria configuration."""
     activity_name = choose_activity("remove")
+    if not activity_name:
+        return
     if activity_name == "Back":
         return
     config = load_config()
-    activities= config["activities"]
+    activities= config.get("activities")
+    if not activities:
+        logger.error("No activities configured.")
+        print("No activities found, Please add one first.")
+        return
     if confirm(f"Do you want to remove this activity? {activity_name}:  {activities[activity_name]}"):
         del config["activities"][activity_name]
         save_config(config)
