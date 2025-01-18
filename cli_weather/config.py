@@ -26,6 +26,22 @@ LOG_DIR.mkdir(exist_ok=True, parents=True)
 
 # Configuration file for saving locations and activities.
 CONFIG_FILE = CONFIG_DIR / "config.json"
+# Default configuration to use if configuration file is not found or unreadable. Also used for first time users.
+DEFAULT_CONFIG = {
+    "locations": {"Manila": "14.5987713, 120.9833966"},
+    "activities": {"hiking": {
+            "temp_min": 18,
+            "temp_max": 30,
+            "rain": 0.0,
+            "wind_min": 0,
+            "wind_max": 10.0,
+            "time_range": [
+                "00:00",
+                "23:59"
+            ]
+        }
+    }
+}
 
 # Time for cached data to expire.
 CACHE_EXPIRY = timedelta(minutes=30)
@@ -51,27 +67,38 @@ def configure_logging():
 
 
 def load_config() -> Dict:
-    """Load the configuration file to get data."""
+    """Load the configuration file. Creates a default if it doesn't exist."""
+    if not CONFIG_FILE.exists():
+        logger.warning(f"Configuration file not found. Creating default at: {CONFIG_FILE}")
+        try:
+            save_config(DEFAULT_CONFIG) # Create initial config file
+            return DEFAULT_CONFIG
+        except Exception as e:
+            logger.exception(f"Error creating default config file: {e}")
+            return DEFAULT_CONFIG
+
     try:
-        logger.debug("Loading configuration...")
         with open(CONFIG_FILE, encoding='utf-8') as f:
             config = json.load(f)
-            logger.debug("Configuration loaded successfully.")
             return config
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        logger.error("Returning empty configuration, failed to load configuration.")
-        return {}
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in configuration file: {e}")
+        print("Error: Invalid configuration file. Using defaults.")
+        return DEFAULT_CONFIG
+    except Exception as e:
+        logger.exception(f"An unexpected error occurred loading configuration: {e}")
+        return DEFAULT_CONFIG
 
 
 def save_config(data: Dict) -> None:
     """Write data to configuration file."""
     try:
-        logging.debug("Saving configuration...")
+        logger.debug("Saving configuration...")
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
             logger.debug("Configuration saved successfully.")
     except (json.JSONDecodeError, FileNotFoundError,OSError) as e:
         logger.error(f"Error saving data to configuration: {e}")
-        raise CLIWeatherException("Error saving data to configuration.")
-    except Exception:
-        raise
+        raise CLIWeatherException(f"Error saving data to configuration. {e}")
+    except Exception as e:
+        logger.exception(f"Error saving data to configuration. {e}")

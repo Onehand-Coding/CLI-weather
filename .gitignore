@@ -6,3 +6,4 @@ venv/
 .envbuild/
 cli_weather.egg-info/
 build/
+test_cache/
