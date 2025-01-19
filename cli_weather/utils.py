@@ -93,7 +93,7 @@ def get_index(items: List) -> int:
             raise
 
 
-def choose_local_path(main_path: Path, prompt: str) -> Path:
+def choose_local_path() -> Path:
     """Choose a local folder to place weather forecast file."""
     def is_hidden(file: Path) -> bool:
         """Checks if a file is hidden."""
@@ -115,6 +115,9 @@ def choose_local_path(main_path: Path, prompt: str) -> Path:
         except PermissionError as e:
             logging.error(f"Error: no permission to access folder: {e}")
             raise CLIWeatherException("No permission to access folder.")
+    
+    main_path = Path.home() / "storage/shared" #Make these local variables.
+    prompt = "Choose folder to save weather forecast"
 
     while True:
         chosen_folder = choose_folder(main_path, prompt)
@@ -149,3 +152,11 @@ def run_menu(options: List[Dict], prompt: str = "", main: bool = False) -> None:
             func()
     except KeyboardInterrupt:
         raise
+
+
+def choose(choices: List, add_back: bool = False) -> None:
+    """Let user choose an item from a list of choices."""
+    for index, item in enumerate(choices, start=1):
+        print(f"{index}. {item.title()}")
+
+    return choices[get_index(choices)]

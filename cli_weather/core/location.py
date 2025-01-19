@@ -5,7 +5,7 @@ import requests
 import geopy
 from geopy.geocoders import Nominatim
 from ..config import VARS, load_config, save_config
-from ..utils import CLIWeatherException, confirm, get_index
+from ..utils import CLIWeatherException, confirm, get_index, choose
 
 logger = logging.getLogger(__file__)
 
@@ -124,11 +124,7 @@ def choose_location(task: str = "", add_sensitive: bool = False) -> Tuple[str, T
     #  Add choice to go back.
     locations["Back"] = "N, A"
     print(f"\nChoose a location {task}:")
-    for index, name in enumerate(locations, start=1):
-        print(f"{index}. {name.title()}")
-
-    index = get_index(locations)
-    location_name = list(locations.keys())[index]
+    location_name = choose(list(locations))
     lat, lon = locations[location_name].split(",")
     return location_name, (lat.strip(), lon.strip())
 

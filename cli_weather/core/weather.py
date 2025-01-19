@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from typing import List, Dict
 from collections import defaultdict
 import requests
-from ..utils import CLIWeatherException, CacheManager, confirm, get_index, choose_local_path, run_menu
+from cli_weather.utils import CLIWeatherException, CacheManager, confirm, get_index, choose_local_path, run_menu
 from ..config import API_KEY, LOCAL_TIMEZONE, load_config
 from .activity import choose_activity
 from .location import get_location, choose_location
@@ -187,9 +187,7 @@ def display_grouped_forecast(forecast_data: List[Dict], forecast_type: str = "da
 def save_weather_to_file(location_name: str, weather_days: List[Dict], activity: str = None) -> None:
     """Save the weather forecast and best days to a file."""
     logger.debug(f"Saving weather forecast for {location_name}...")
-    main_path = Path.home() / "storage/shared"
-    prompt = "Choose folder to save weather forecast"
-    forecast_file_path = choose_local_path(main_path, prompt)
+    forecast_file_path = choose_local_path()
     forecast_file = forecast_file_path / f"{location_name}_{activity}_weather.txt" if activity is not None else forecast_file_path / f"{location_name}_weather.txt"
 
     with open(forecast_file, 'w') as file:
@@ -346,6 +344,8 @@ def view_oncurrent_location(cache: CacheManager) -> None:
         """View best days for an activity for the current location."""
         logger.debug("viewing best activity day on current location...")
         activity = choose_activity("check")
+        if activity == "Back":
+            return
          # Fetch daily and hourly weather data
         raw_daily_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
         daily_weather = parse_weather_data(raw_daily_data)

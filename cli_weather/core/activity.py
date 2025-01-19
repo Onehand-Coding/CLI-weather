@@ -4,7 +4,7 @@ import requests
 import geopy
 from geopy.geocoders import Nominatim
 from ..config import VARS, UNITS, load_config, save_config
-from ..utils import CLIWeatherException, confirm, get_index
+from ..utils import CLIWeatherException, confirm, get_index, choose
 
 logger = logging.getLogger(__file__)
 
@@ -19,7 +19,7 @@ def save_activity(activity_name: str, criteria: Dict) -> None:
     logger.debug(f"'{activity_name}' saved successfully.")
 
 
-def get_criteria(activity: str) -> Dict:
+def get_activity_criteria(activity: str) -> Dict:
     """Get user criteria for an activity."""
     print(f"\nProvide criteria for {activity}.\n")
     while True:
@@ -72,12 +72,10 @@ def choose_activity(task: str = None) -> str:
 
     prompt = f"Choose an activity to {task}." if task else "Choose an activity."
     print(prompt)
-    # Add option to go back.
-    activities["Back"] = ""
-    for i, activity in enumerate(activities, start=1):
-        print(f"{i}. {activity.title()}") # Added index to output
-
-    activity_name = list(activities.keys())[get_index(list(activities))]
+    # Add option to go back to previous menu.
+    activity_names = list(activities)
+    activity_names.append("Back")
+    activity_name = choose(activity_names)
     return activity_name
 
 
@@ -103,7 +101,7 @@ def add_activity() -> None:
     activity_name = ""
     while not activity_name:
         activity_name = input("Enter activity name: ").lower().strip()
-    criteria = get_criteria(activity_name)
+    criteria = get_activity_criteria(activity_name)
     if confirm("Save activity?"):
         save_activity(activity_name, criteria)
         print(f"\n{activity_name.title()} activity added successfully.")
@@ -125,7 +123,7 @@ def edit_activity() -> None:
         else:
             print(f"  {key.replace('_', ' ').title()}: {value} {unit}")
 
-    new_criteria = get_criteria(activity_name)
+    new_criteria = get_activity_criteria(activity_name)
     if confirm("Save changes?"):
         save_activity(activity_name, new_criteria)
         print(f"Criteria for {activity_name.title()} updated successfully.")
