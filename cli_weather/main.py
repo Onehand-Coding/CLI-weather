@@ -15,22 +15,18 @@ from .core.weather import view_current, view_hourly, view_5day, view_certain_day
 from .core.location import view_locations, add_location, save_current_location, search_location, delete_location
 from .core.activity import view_activities, add_activity, edit_activity, delete_activity
 
-# Use caching when fetching weather data.
+# Use caching for fetching weather data.
 cache_manager = CacheManager(CACHED_DIR, CACHE_EXPIRY)
 
 # == Menu Options == #
-MAIN_OPTIONS = [
+WEATHER_OPTIONS = [
     {"View Current Weather": lambda: view_current(cache_manager)},
     {"View Hourly Forecast": lambda: view_hourly(cache_manager)},
     {"View 5-Day Forecast": lambda: view_5day(cache_manager)},
     {"View Forecast for a Certain Day": lambda: view_certain_day(cache_manager)},
     {"View Best Day(s) for an Activity": lambda: view_best_activity_day(cache_manager)},
     {"View Forecasts in Current Location": lambda: view_oncurrent_location(cache_manager)},
-    {"Track Typhoons": lambda: view_typhoon_tracker()},
-    {"Manage Activities": lambda: run_menu(ACTIVITY_OPTIONS, "Manage Activities")},
-    {"Manage Locations": lambda : run_menu(LOCATION_OPTIONS, "Manage Locations")},
-    {"Other Options": lambda: run_menu(OTHER_OPTIONS, "OTHER OPTIONS")},
-    {"Exit": None}
+    {"Back": None}
 ]
 LOCATION_OPTIONS = [
     {"View locations": lambda: view_locations()},
@@ -51,6 +47,14 @@ OTHER_OPTIONS = [
     {"Clear cached data": lambda: cache_manager.clear()},
     {"Clear logs": lambda: clear_logs(LOG_DIR)},
     {"Back": None}]
+MAIN_OPTIONS = [
+    {"View Weather Forecasts": lambda: run_menu(WEATHER_OPTIONS, "View Weather Forecasts")},
+    {"Manage Activities": lambda: run_menu(ACTIVITY_OPTIONS, "Manage Activities")},
+    {"Manage Locations": lambda : run_menu(LOCATION_OPTIONS, "Manage Locations")},
+    {"Track Typhoons": lambda: view_typhoon_tracker()},
+    {"Other Options": lambda: run_menu(OTHER_OPTIONS, "OTHER OPTIONS")},
+    {"Exit": None}
+]
 
 
 def main() -> None:

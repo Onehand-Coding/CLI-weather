@@ -3,11 +3,10 @@
 CLI Weather is a command-line application that provides weather information, forecasts, and activity recommendations based on the user's location. It allows users to view current weather, hourly forecasts, and multi-day forecasts. Additionally, it provides functionality for managing user-defined locations, activities and saving their current location.
 
 ## Features:
--View this weather data in chosen location.
-    - View current weather
-    - View hourly forecast
-    - View 5-day forecast
-    - View best days to do an activity, Based on criteria set by user.
+- View current weather in chosen location.
+- View hourly forecast in chosen location.
+- View 5-day forecast in chosen location.
+- View best days for an activity based on criteria set by user.
 - Manage saved activities (view, add, edit, delete)
 - Manage saved locations (view, add, delete)
 
