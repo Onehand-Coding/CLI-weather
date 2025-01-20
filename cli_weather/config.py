@@ -1,3 +1,9 @@
+"""
+Configuration module for the CLI Weather Application.
+
+Loads environment variables, defines file paths, sets default configurations,
+and handles loading and saving application settings.
+"""
 import json
 import logging
 from pathlib import Path
@@ -58,7 +64,7 @@ UNITS = {
 
 
 def configure_logging():
-    """Setup logging for ease of debugging."""
+    """Configures the logging settings for the application."""
     logging.basicConfig(
     level=getattr(logging, LOG_LEVEL),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -67,7 +73,7 @@ def configure_logging():
 
 
 def load_config() -> Dict:
-    """Load the configuration file. Creates a default if it doesn't exist."""
+    """Loads the configuration from the config file or returns the default."""
     if not CONFIG_FILE.exists():
         logger.warning(f"Configuration file not found. Creating default at: {CONFIG_FILE}")
         try:
@@ -91,7 +97,7 @@ def load_config() -> Dict:
 
 
 def save_config(data: Dict) -> None:
-    """Write data to configuration file."""
+    """Saves the configuration data to the config file."""
     try:
         logger.debug("Saving configuration...")
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:

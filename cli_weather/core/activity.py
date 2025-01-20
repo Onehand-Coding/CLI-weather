@@ -1,5 +1,6 @@
+"""Activity management functions."""
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 import requests
 import geopy
 from geopy.geocoders import Nominatim
@@ -11,7 +12,7 @@ logger = logging.getLogger(__file__)
 
 # === Activity management functions === #
 def save_activity(activity_name: str, criteria: Dict) -> None:
-    """Write configured set of criteria for each activity in configuration file."""
+    """Saves activity criteria to the configuration file."""
     logger.debug(f"Saving activity: {activity_name}")
     configuration = load_config()
     configuration.setdefault("activities", {})[activity_name] = criteria
@@ -20,7 +21,7 @@ def save_activity(activity_name: str, criteria: Dict) -> None:
 
 
 def get_activity_criteria(activity: str) -> Dict:
-    """Get user criteria for an activity."""
+    """Gets activity criteria input from the user."""
     print(f"\nProvide criteria for {activity}.\n")
     while True:
         try:
@@ -61,8 +62,8 @@ def get_activity_criteria(activity: str) -> Dict:
             raise
 
 
-def choose_activity(task: str = None) -> str:
-    """Let user choose an activity."""
+def choose_activity(task: str = None) -> Union[str, None]:
+    """Prompts the user to choose an activity from the saved activities."""
     config = load_config()
     activities = config.get("activities", {})
     if not activities:
@@ -80,7 +81,7 @@ def choose_activity(task: str = None) -> str:
 
 
 def view_activities() -> None:
-    """View existing activity-criteria configurations."""
+    """Displays the saved activities and their criteria."""
     activities = load_config().get("activities", {})
     if not activities:
         print("No activities found. Please add an activity first.")
@@ -97,7 +98,7 @@ def view_activities() -> None:
 
 
 def add_activity() -> None:
-    """Add new activity-criteria configuration."""
+    """Adds a new activity with user-defined criteria."""
     activity_name = ""
     while not activity_name:
         activity_name = input("Enter activity name: ").lower().strip()
@@ -108,7 +109,7 @@ def add_activity() -> None:
 
 
 def edit_activity() -> None:
-    """Edit existing criteria for an activity."""
+    """Edits the criteria for an existing activity."""
     activity_name = choose_activity("edit")
     if not activity_name:
         return
@@ -130,7 +131,7 @@ def edit_activity() -> None:
 
 
 def delete_activity() -> None:
-    """Let user remove an existing activity-criteria configuration."""
+    """Allows user to delete an activity from saved activities."""
     activity_name = choose_activity("remove")
     if not activity_name:
         return

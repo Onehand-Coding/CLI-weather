@@ -1,16 +1,22 @@
+"""
+Utility functions for the CLI Weather Application.
+
+Provides helper functions for exception handling, caching, logging,
+user input, and menu navigation.
+"""
 import sys
 import json
 import logging
 import hashlib
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Union
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__file__)
 
 
 class CLIWeatherException(Exception):
-    """Raise for clear and user friendly error message."""
+    """Raise for clear and user friendly error messages."""
 
 
 class CacheManager:
@@ -21,21 +27,21 @@ class CacheManager:
         self.expiry = expiry
 
     def _generate_key(self, *args) -> str:
-        """Generate a unique cache key."""
+        """Generates a unique MD5 hash key for cache entries."""
         key_string = "_".join(map(str, args))
         key = hashlib.md5(key_string.encode()).hexdigest()
         logger.debug("Generated cache key successfully.")
         return key
 
     def save(self, key: str, data: dict) -> None:
-        """Save data to the cache."""
+        """Saves data to the cache with a timestamp."""
         cache_file = self.cache_dir / key
         with cache_file.open('w') as file:
             json.dump({"timestamp": datetime.now().isoformat(), "data": data}, file)
         logger.debug("Cache file saved successfully.")
 
-    def load(self, key: str) -> dict | None:
-        """Load data from the cache if valid."""
+    def load(self, key: str) -> Union[Dict, None]:
+        """Loads data from the cache if it exists and is not expired."""
         cache_file = self.cache_dir / key
         if not cache_file.exists():
             return None
@@ -62,7 +68,7 @@ class CacheManager:
 
 # === Utility functions ===#
 def clear_logs(log_dir):
-    """Clears the log file."""
+    """Clears the log files in the specified directory."""
     for file in log_dir.iterdir():
         file.unlink()
     logging.debug("Cleared logs successfully.")
@@ -81,7 +87,7 @@ def confirm(prompt: str) -> bool:
 
 
 def get_index(items: List) -> int:
-    """Get the index of an item from the given list of items."""
+    """Prompts the user to select an item from a numbered list."""
     while True:
         try:
             index = int(input("> "))
@@ -94,7 +100,12 @@ def get_index(items: List) -> int:
 
 
 def choose_local_path() -> Path:
-    """Choose a local folder to place weather forecast file."""
+    """
+    Prompts the user to choose a local folder using an interactive menu.
+    This function makes all path variables local for better scoping and 
+    handles potential `PermissionError`.
+    """
+
     def is_hidden(file: Path) -> bool:
         """Checks if a file is hidden."""
         return file.name.startswith(".") and file.name not in (".", "..")
@@ -133,7 +144,7 @@ def choose_local_path() -> Path:
 
 
 def run_menu(options: List[Dict], prompt: str = "", main: bool = False) -> None:
-    """Run menu and execute selected actions."""
+    """Displays an interactive menu and executes the chosen option."""
     try:
         while True:
             print(f"\n{prompt}")

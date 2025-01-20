@@ -1,8 +1,9 @@
+"""Weather data handling functions."""
 import logging
 from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from typing import List, Dict
+from typing import List, Dict, Union
 from collections import defaultdict
 import requests
 from cli_weather.utils import CLIWeatherException, CacheManager, confirm, get_index, choose_local_path, run_menu
@@ -12,12 +13,9 @@ from .location import get_location, choose_location
 
 logger = logging.getLogger(__file__)
 
-"""Functions that handle weather data proccessing and viewing."""
-
 
 def fetch_weather_data(lat: float, lon: float, api_key: str, cache: CacheManager, forecast_type: str ="5-day") -> Dict:
-    """Fetch weather data from cache  if available,
-     else proceed with fetching data using OpenWeatherMap API."""
+    """Fetches weather data from API or cache."""
 
     cache_key = cache._generate_key(lat, lon, forecast_type)
     cached_data = cache.load(cache_key)
@@ -95,7 +93,7 @@ def parse_weather_data(data: Dict, forecast_type: str = "5-day") -> List[Dict]:
 
 
 def filter_best_days(daily_weather: List[Dict], activity: str, hourly_weather: List[Dict]) -> List:
-    """Filter and rank days with the best weather for an activity."""
+    """Filter best days for specific activity."""
     logger.debug(f"Filtering best weather days for {activity}...")
     criteria = load_config()["activities"].get(activity, {})
     time_range = criteria.get("time_range", ["00:00", "23:59"])
@@ -155,6 +153,7 @@ def filter_best_days(daily_weather: List[Dict], activity: str, hourly_weather: L
 
 
 def display_grouped_forecast(forecast_data: List[Dict], forecast_type: str = "daily") -> None:
+    """Displays weather forecasts grouped by date."""
     logger.debug(f"Displaying grouped forecast for '{forecast_type}'...")
     grouped_forecast = defaultdict(list)
 
@@ -185,7 +184,7 @@ def display_grouped_forecast(forecast_data: List[Dict], forecast_type: str = "da
 
 
 def save_weather_to_file(location_name: str, weather_days: List[Dict], activity: str = None) -> None:
-    """Save the weather forecast and best days to a file."""
+    """Saves weather forecast to a file."""
     logger.debug(f"Saving weather forecast for {location_name}...")
     forecast_file_path = choose_local_path()
     forecast_file = forecast_file_path / f"{location_name}_{activity}_weather.txt" if activity is not None else forecast_file_path / f"{location_name}_weather.txt"
@@ -203,7 +202,7 @@ def save_weather_to_file(location_name: str, weather_days: List[Dict], activity:
 
 
 def view_5day(cache: CacheManager) -> None:
-    """Display 5-day weather Forecast for a chosen location."""
+    """Displays 5-day weather Forecast for a chosen location."""
 
     location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True)
     if location_name == "Back":
@@ -220,11 +219,16 @@ def view_5day(cache: CacheManager) -> None:
 
 
 def view_best_activity_day(cache: CacheManager) -> None:
-    """View best day(s) for an activity in a chosen location."""
+    """Displays the best days for a chosen activity."""
+    
     activity = choose_activity("check")
+    if not activity:
+        return
     if activity == "Back":
         return
     location_name, (lat, lon) = choose_location(task=f"to check best day(s) for {activity}", add_sensitive=True)
+    if not location_name:
+        return
     if location_name == "Back":
         return
 
@@ -252,7 +256,7 @@ def view_best_activity_day(cache: CacheManager) -> None:
 
 
 def view_current(cache: CacheManager) -> None:
-    """View current weather forecast for chosen location."""
+    """Displays current weather condition for chosen location."""
     location_name, (lat, lon) = choose_location(task="to view the current weather", add_sensitive=True)
     if location_name == "Back":
         return
@@ -264,7 +268,7 @@ def view_current(cache: CacheManager) -> None:
         f"Wind: {current_weather['wind_speed']:.2f} km/h, Rain: {current_weather['rain']} mm")
 
 def view_hourly(cache: CacheManager) -> None:
-    """View hourly forecast for a chosen location."""
+    """Displays the hourly forecast for a chosen location."""
     location_name, (lat, lon) = choose_location(task="to view the hourly weather forecast from", add_sensitive=True)
     if location_name == "Back":
         return
@@ -277,7 +281,7 @@ def view_hourly(cache: CacheManager) -> None:
 
 
 def view_certain_day(cache: CacheManager) -> None:
-    """View forecast for a certain day in chosen location."""
+    """Displays forecast for a certain day in chosen location."""
     def choose_day(daily_weather):
         """Allow the user to select a specific day for detailed weather or hourly forecast."""
         print("\nSelect a day for details:")
@@ -316,7 +320,7 @@ def view_certain_day(cache: CacheManager) -> None:
 
 
 def view_oncurrent_location(cache: CacheManager) -> None:
-    """View different weather forecasts on current location."""
+    """Displays various forecasts for the current location."""
     logger.debug("viewing different weather forecast in current location...")
     def display_oncurrent(forecast_type: str, lat: float, lon: float) -> None:
         """Function to view forcast on current location."""

@@ -1,6 +1,7 @@
+"""Location management functions."""
 import json
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 import requests
 import geopy
 from geopy.geocoders import Nominatim
@@ -11,7 +12,7 @@ logger = logging.getLogger(__file__)
 
 # === Location management functions === #
 def load_locations(add_sensitive: bool = False) -> Dict:
-    """Load sensitive locations from .env and non sensitive from configuration."""
+    """Loads location data from config and optionally from environment variables."""
     logger.debug("Loading locations...")
     non_sensitive_locations = load_config().get("locations", {})
     sensitive_locations = {
@@ -25,7 +26,7 @@ def load_locations(add_sensitive: bool = False) -> Dict:
 
 
 def is_valid_location(value: str) -> bool:
-    """Check if a given value is a valid coordinate for location."""
+    """Checks if a given string represents valid latitude/longitude coordinates."""
     try:
         logger.debug(f"Checking if '{value}' is valid location coordinate.")
         lat, lon = map(float, value.split(","))
@@ -34,7 +35,7 @@ def is_valid_location(value: str) -> bool:
         return False
 
 
-def get_location(addr: str = "me") -> Tuple[str, str, str] | Tuple[None, None, None]:
+def get_location(addr: str = "me") -> Union[Tuple[str, float, float], Tuple[None, None, None]]:
     """Get location by address or approximate current location."""
     geopy.adapters.BaseAdapter.session = requests.Session()
 
@@ -94,7 +95,7 @@ def get_location(addr: str = "me") -> Tuple[str, str, str] | Tuple[None, None, N
 
 
 def get_location_input() -> Tuple[str, str]:
-    """Get location name and coordinate from user."""
+    """Gets location name and coordinates input from the user."""
     try:
         while True:
             location_name = input("Enter location name: ")
@@ -107,7 +108,7 @@ def get_location_input() -> Tuple[str, str]:
 
 
 def save_location(location_name: str, coordinate: str) -> None:
-    """Write location info into configuration file."""
+    """Saves a location into configuration file."""
     logger.debug(f"Saving location : {location_name}...")
     configuration = load_config()
     configuration.setdefault("locations", {})[location_name] = coordinate
@@ -116,21 +117,21 @@ def save_location(location_name: str, coordinate: str) -> None:
 
 
 def choose_location(task: str = "", add_sensitive: bool = False) -> Tuple[str, Tuple[str, str]]:
-    """Prompt the user to choose a location."""
+    """Prompt the user to choose a location from the saved locations."""
     locations = load_locations( add_sensitive)
     if not locations:
         print("No locations found. Please add one first.")
         return
     #  Add choice to go back.
     locations["Back"] = "N, A"
-    print(f"\nChoose a location {task}:")
+    print(f"\nChoose a location {task}.")
     location_name = choose(list(locations))
     lat, lon = locations[location_name].split(",")
     return location_name, (lat.strip(), lon.strip())
 
 
 def search_location() -> None:
-    """Let user search location by address and save."""
+    """Allow user to search for a location and save it."""
     search_query = input("Enter location to search: ")
     try:  # Catching custom exception early here to prevent getting out of manage locations menu early.
         address, lat, lon = get_location(search_query)
@@ -149,7 +150,7 @@ def search_location() -> None:
 
 
 def view_locations() -> None:
-    """View non sensitive locations saved by the user."""
+    """Displays the saved locations."""
     locations = load_locations()
     if not locations:
         print("No locations found. Please add one first.")
@@ -163,7 +164,7 @@ def view_locations() -> None:
 
 
 def add_location() -> None:
-    """Add non-sensitive location to configuration file."""
+    """Adds a new location to the saved locations."""
     location_name, coordinate = get_location_input()
     if confirm(f"Save this location?\n {location_name}: {coordinate}"):
         save_location(location_name, coordinate)
@@ -190,7 +191,7 @@ def save_current_location() -> None:
 
 
 def delete_location() -> None:
-    """Let user remove a non sensitive location from configuration."""
+    """Let user delete a location from saved locations."""
     try:
         location_name, _ = choose_location(task="to delete")
     except TypeError:

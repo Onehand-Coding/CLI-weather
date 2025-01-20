@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+"""
+Main module for the CLI Weather Application.
+
+This module initializes the application, handles user interaction, and manages
+the main menu loop. It integrates with other modules for weather data retrieval,
+location management, activity configuration, and utility functions.
+"""
 import sys
 import time
 import logging
@@ -47,6 +54,12 @@ OTHER_OPTIONS = [
 
 
 def main() -> None:
+    """
+    Main function to run the CLI Weather Application.
+
+    Configures logging, displays the welcome message, and enters the main menu loop.
+    Handles exceptions and keyboard interrupts gracefully.
+    """
     configure_logging()
     logging.debug("App started.")
     print("\nWelcome to CLI Weather Assistant!")
