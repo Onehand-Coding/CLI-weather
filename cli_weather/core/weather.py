@@ -40,7 +40,7 @@ def fetch_weather_data(lat: float, lon: float, api_key: str, cache: CacheManager
         raise CLIWeatherException("Request timed out, Please check your network connection.")
     except requests.exceptions.HTTPError as e:
         logger.error(f"Failed to fetch weather data, HTTP error occurred: {e.response.status_code} {e.response.reason}")
-        raise CLIWeatherException("Failed to fetch weather data, HTTP error.")
+        raise CLIWeatherException(f"Failed to fetch weather data, {e.response.reason}.")
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Failed to fetch weather data, connection error: {e}")
         raise CLIWeatherException("Failed to fetch weather data. Network error, Please check your connection and try again.")
@@ -179,7 +179,7 @@ def display_grouped_forecast(forecast_data: List[Dict], forecast_type: str = "da
 
         for entry in entries:
             time_info = f"Time: {entry['time']}, " if entry['time'] else ""
-            print(f"  {time_info}Temp: {entry['temp']}°C, Weather: {entry.get('weather', 'N/A')}, "
+            print(f"  {time_info}Temp: {entry['temp']:.2f}°C, Weather: {entry.get('weather', 'N/A')}, "
                   f"Wind: {entry['wind_speed']:.2f} km/h, Rain: {entry['rain']} mm")
 
 
@@ -204,11 +204,24 @@ def save_weather_to_file(location_name: str, weather_days: List[Dict], activity:
 def view_5day(cache: CacheManager) -> None:
     """Displays 5-day weather Forecast for a chosen location."""
 
-    location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True)
-    if location_name == "Back":
+    location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True, add_search=True)
+    if location_name == "Back":  # A signal to return from previous menu.
         return
+    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+        print("Enter the adress to search.")
+        address = input("> ").strip()
+        try:  # Catch the exception early to prevent going out of weather viewing menu.
+            location_name, lat, lon = get_location(address)
+        except CLIWeatherException as e:
+            print(f"Error: {e}")
+            return
+
     logger.debug(f"viewing 5-day weather forecast in {location_name}...")
-    raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
+    try:
+        raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
+    except CLIWeatherException as e:
+        print(f"Error: {e}")
+        return
     daily_weather = parse_weather_data(raw_data)
 
     print("\n5-Day Forecast:")
@@ -226,18 +239,32 @@ def view_best_activity_day(cache: CacheManager) -> None:
         return
     if activity == "Back":
         return
-    location_name, (lat, lon) = choose_location(task=f"to check best day(s) for {activity}", add_sensitive=True)
-    if not location_name:
+    location_name, (lat, lon) = choose_location(task=f"to check best day(s) for {activity}", add_sensitive=True, add_search=True)
+    if location_name == "Back":  # A signal to return from previous menu.
         return
-    if location_name == "Back":
-        return
+    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+        print("Enter the adress to search.")
+        address = input("> ").strip()
+        try:  # Catch the exception early to prevent going out of weather viewing menu.
+            location_name, lat, lon = get_location(address)
+        except CLIWeatherException as e:
+            print(f"Error: {e}")
+            return
 
     # Fetch daily and hourly weather data
     logger.debug(f"viewing best activity days for {activity} in {location_name}...")
-    raw_daily_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
+    try:
+        raw_daily_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
+    except CLIWeatherException as e:
+        print(f"Error: {e}")
+        return
     daily_weather = parse_weather_data(raw_daily_data)
 
-    raw_hourly_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="hourly")
+    try:
+        raw_hourly_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="hourly")
+    except CLIWeatherException as e:
+        print(f"Error: {e}")
+        return
     hourly_weather = parse_weather_data(raw_hourly_data, forecast_type="hourly")
 
     # Get the best days for the activity.
@@ -257,11 +284,24 @@ def view_best_activity_day(cache: CacheManager) -> None:
 
 def view_current(cache: CacheManager) -> None:
     """Displays current weather condition for chosen location."""
-    location_name, (lat, lon) = choose_location(task="to view the current weather", add_sensitive=True)
-    if location_name == "Back":
+    location_name, (lat, lon) = choose_location(task="to view the current weather", add_sensitive=True, add_search=True)
+    if location_name == "Back":  # A signal to return from previous menu.
         return
+    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+        print("Enter the adress to search.")
+        address = input("> ").strip()
+        try:  # Catch the exception early to prevent going out of weather viewing menu.
+            location_name, lat, lon = get_location(address)
+        except CLIWeatherException as e:
+            print(f"Error: {e}")
+            return
+
     logger.debug(f"Viewing current weather in {location_name}...")
-    raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="current")
+    try:
+        raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="current")
+    except CLIWeatherException as e:
+        print(f"Error: {e}")
+        return
     current_weather = parse_weather_data(raw_data, forecast_type="current")
     print(f"\nCurrent Weather in {location_name}:")
     print(f"Date: {current_weather['date']}, Temp: {current_weather['temp']}°C, Weather: {current_weather['weather'].title()}, "
@@ -269,11 +309,24 @@ def view_current(cache: CacheManager) -> None:
 
 def view_hourly(cache: CacheManager) -> None:
     """Displays the hourly forecast for a chosen location."""
-    location_name, (lat, lon) = choose_location(task="to view the hourly weather forecast from", add_sensitive=True)
-    if location_name == "Back":
+    location_name, (lat, lon) = choose_location(task="to view the hourly weather forecast from", add_sensitive=True, add_search=True)
+    if location_name == "Back":  # A signal to return from previous menu.
         return
+    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+        print("Enter the adress to search.")
+        address = input("> ").strip()
+        try:  # Catch the exception early to prevent going out of weather viewing menu.
+            location_name, lat, lon = get_location(address)
+        except CLIWeatherException as e:
+            print(f"Error: {e}")
+            return
+
     logger.debug(f"viewing hourly weather forecast in {location_name}...")
-    raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="hourly")
+    try:
+        raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="hourly")
+    except CLIWeatherException as e:
+        print(f"Error: {e}")
+        return
     hourly_weather = parse_weather_data(raw_data, forecast_type="hourly")
 
     print("\nHourly Forecast (Next 24 Hours):")
@@ -291,10 +344,23 @@ def view_certain_day(cache: CacheManager) -> None:
         index = get_index([day['date'] for day in daily_weather])
         return daily_weather[index]
 
-    location_name, (lat, lon) = choose_location(task="to view a certain day\'s weather forecast", add_sensitive=True)
-    if location_name == "Back":
+    location_name, (lat, lon) = choose_location(task="to view a certain day\'s weather forecast", add_sensitive=True, add_search=True)
+    if location_name == "Back":  # A signal to return from previous menu.
         return
-    raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
+    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+        print("Enter the adress to search.")
+        address = input("> ").strip()
+        try:  # Catch the exception early to prevent going out of weather viewing menu.
+            location_name, lat, lon = get_location(address)
+        except CLIWeatherException as e:
+            print(f"Error: {e}")
+            return
+
+    try:
+        raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
+    except CLIWeatherException as e:
+        print(f"Error: {e}")
+        return
     daily_weather = parse_weather_data(raw_data)
     selected_day = choose_day(daily_weather)
 
@@ -324,7 +390,11 @@ def view_oncurrent_location(cache: CacheManager) -> None:
     logger.debug("viewing different weather forecast in current location...")
     def display_oncurrent(forecast_type: str, lat: float, lon: float) -> None:
         """Function to view forcast on current location."""
-        raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type=forecast_type)
+        try:
+            raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type=forecast_type)
+        except CLIWeatherException as e:
+            print(f"Error: {e}")
+            return
         if forecast_type == "current":
             weather_data = parse_weather_data(raw_data, forecast_type="current")
             print("\nCurrent Weather at Current Location:") # Indicate Current Location
@@ -351,10 +421,18 @@ def view_oncurrent_location(cache: CacheManager) -> None:
         if activity == "Back":
             return
          # Fetch daily and hourly weather data
-        raw_daily_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
+        try:
+            raw_daily_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
+        except CLIWeatherException as e:
+            print(f"Error: {e}")
+            return
         daily_weather = parse_weather_data(raw_daily_data)
 
-        raw_hourly_data = fetch_weather_data(lat, lon, API_KEY, cache,  forecast_type="hourly")
+        try:
+            raw_hourly_data = fetch_weather_data(lat, lon, API_KEY, cache,  forecast_type="hourly")
+        except CLIWeatherException as e:
+            print(f"Error: {e}")
+            return
         hourly_weather = parse_weather_data(raw_hourly_data, forecast_type="hourly")
 
         # Get the best days for the activity.

@@ -116,15 +116,18 @@ def save_location(location_name: str, coordinate: str) -> None:
     logger.debug(f"{location_name} location saved successfully.")
 
 
-def choose_location(task: str = "", add_sensitive: bool = False) -> Tuple[str, Tuple[str, str]]:
+def choose_location(task: str = "", add_sensitive: bool = False, add_search: bool = False) -> Tuple[str, Tuple[str, str]]:
     """Prompt the user to choose a location from the saved locations."""
-    locations = load_locations( add_sensitive)
+    locations = load_locations(add_sensitive)
     if not locations:
         print("No locations found. Please add one first.")
         return
-    #  Add choice to go back.
+    # Add choice to search for a location using an address.
+    if add_search:
+        locations["Search"] = "N, A"
+    # Add choice to go back from previous menu.
     locations["Back"] = "N, A"
-    print(f"\nChoose a location {task}.")
+    print(f"\nChoose a location {task}." if not add_search else f"Choose or search a location {task}.")
     location_name = choose(list(locations))
     lat, lon = locations[location_name].split(",")
     return location_name, (lat.strip(), lon.strip())
