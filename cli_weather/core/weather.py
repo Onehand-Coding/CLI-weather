@@ -35,18 +35,25 @@ def fetch_weather_data(lat: float, lon: float, api_key: str, cache: CacheManager
         data = response.json()
         cache.save(cache_key, data)
         return data
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            logger.error(f"Failed to fetch weather data. Location not found: {lat}, {lon}")
+            raise CLIWeatherException("Failed to fetch weather data. Location not found!")
+        elif e.response.status_code == 401:
+            logger.error(f"Failed to fetch weather data. Invalid API key: {api_key}")
+            raise CLIWeatherException(f"Failed to fetch weather data. Invalid API key: {api_key}")
+        else:
+            logger.error(f"Failed to fetch weather data, HTTP error occurred: {e.response.status_code} {e.response.reason}")
+            raise CLIWeatherException(f"Failed to fetch weather data, {e.response.reason}.")
     except requests.exceptions.Timeout as e:
         logger.error(f"Error fetching weather data, connection timed out: {e}")
         raise CLIWeatherException("Request timed out, Please check your network connection.")
-    except requests.exceptions.HTTPError as e:
-        logger.error(f"Failed to fetch weather data, HTTP error occurred: {e.response.status_code} {e.response.reason}")
-        raise CLIWeatherException(f"Failed to fetch weather data, {e.response.reason}.")
     except requests.exceptions.ConnectionError as e:
         logger.error(f"Failed to fetch weather data, connection error: {e}")
-        raise CLIWeatherException("Failed to fetch weather data. Network error, Please check your connection and try again.")
+        raise CLIWeatherException("Network error, Please check your connection and try again.")
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching weather data: {e}")
-        raise CLIWeatherException("Failed to fetch weather data, Please try again later.")
+        logger.exception(f"Error fetching weather data: {e}")
+        raise CLIWeatherException("Failed to fetch weather data, Unexpected request error occurred.")
 
 
 def parse_weather_data(data: Dict, forecast_type: str = "5-day") -> List[Dict]:

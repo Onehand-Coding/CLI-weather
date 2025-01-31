@@ -1,14 +1,17 @@
 """Location management functions."""
 import json
 import logging
+from json.decoder import JSONDecodeError
 from typing import Dict, Tuple, Union
 import requests
 import geopy
 from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError, GeocoderUnavailable, GeocoderParseError
 from ..config import VARS, load_config, save_config
 from ..utils import CLIWeatherException, confirm, get_index, choose
 
 logger = logging.getLogger(__file__)
+
 
 # === Location management functions === #
 def load_locations(add_sensitive: bool = False) -> Dict:
@@ -48,30 +51,26 @@ def get_location(addr: str = "me") -> Union[Tuple[str, float, float], Tuple[None
             response.raise_for_status()
             data = response.json()
             lat, lon = map(float, data["loc"].split(","))
-            # Use reverse geocoding to refine location details
-            geolocator = Nominatim(user_agent="weather_assistant", timeout=10)
-            location = geolocator.reverse((lat, lon), exactly_one=True)
-            if location:
-                return location.address, lat, lon
-            else:
+
+            try:
+                # Use reverse geocoding to refine location details
+                geolocator = Nominatim(user_agent="weather_assistant", timeout=10)
+                location = geolocator.reverse((lat, lon), exactly_one=True)
+                address = location.address if location else "Approximate location based on IP"
+                return address, lat, lon
+            except (GeocoderTimedOut, GeocoderUnavailable, GeocoderServiceError) as e:
+                logger.warning(f"Reverse geocoding failed: {e}")
                 return "Approximate location based on IP", lat, lon
+
         except requests.exceptions.Timeout as e:
-            logger.error(f"Error getting current location coordinate from IP, Connection timed out: {e}")
+            logger.error(f"Error getting current location from IP, Connection timed out: {e}")
             raise CLIWeatherException("Failed to get your current location, Request timed out. Please check your network connection.")
         except requests.exceptions.ConnectionError as e:
-            logger.error(f"Error getting current location coordinate from IP, Connection error: {e}")
+            logger.error(f"Error getting current location from IP, Connection error: {e}")
             raise CLIWeatherException("Failed to get your current location, Network error. Please check your connection and try again.")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error Getting current coordinate using ip, RequestException: {e}")
-            raise CLIWeatherException("Failed to get your current location, Please try again later.")
-        except geopy.exc.GeocoderTimedOut as e:
-            logger.error(f"Error getting current location, Geocoding timed out: {e}")
-            raise CLIWeatherException("Failed to get your current location, geocoding timed out. Please check your network connection.")
-        except geopy.exc.GeocoderUnavailable as e:
-            logger.error(f"Error getting current location, Geocoding service unavailable: {e}")
-            raise CLIWeatherException("Geocoding service is unavailable. Please check your internet connection.")
-        except Exception:
-            raise
+        except (requests.exceptions.RequestException, JSONDecodeError) as e:
+            logger.exception(f"Error Getting current location: {e}")
+            raise CLIWeatherException("Could not get current location.")
 
     else:  # Use Geopy for address-based geocoding
         logger.debug(f"Getting location for: {addr}")
@@ -83,14 +82,22 @@ def get_location(addr: str = "me") -> Union[Tuple[str, float, float], Tuple[None
             else:
                 logger.error(f"Geolocator could not find location: '{addr}'")
                 raise CLIWeatherException(f"Could not find location: '{addr}'")
-        except geopy.exc.GeocoderTimedOut as e:
-            logger.error(f"Geocoding timed out: {e}")
-            raise CLIWeatherException("Could not find location, Geocoding timed out.")
-        except geopy.exc.GeocoderUnavailable:
-            logger.error(f"Geolocator could not find location: {addr}. Geocoding service unavailable.")
-            raise CLIWeatherException("Geocoding service is unavailable. Please check your internet connection.")
-        except Exception:
-            raise
+        except GeocoderTimedOut as e:
+            logger.error(f"Failed to find location: {addr} geocoder timedout: {e}")
+            raise CLIWeatherException(f"Failed to find {addr}. Geocoding timed out.")
+        except GeocoderUnavailable as e:
+            logger.error(f"Failed to find location: {addr} Geocoder unavailable: {e}")
+            raise CLIWeatherException(f"Failed to find {addr}. Geocoding service unavailable.")
+        except GeocoderServiceError as e:
+            logger.error(f"Failed to find {addr} Geocoding service Error: {e}")
+            raise CLIWeatherException(f"Failed to find {addr} Geocoding service error.")
+        except GeocoderParseError as e:
+            logger.error(f"Failed to parse geocoding response: {e}")
+            raise CLIWeatherException("Failed to parse geocoding response.")
+        except Exception as e:
+            logger.exception(f"Unexpected geocoding error: {e}")
+            raise CLIWeatherException(f"Unexpected error occurred during geocoding: {e}")
+
     return None, None, None
 
 

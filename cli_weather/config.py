@@ -35,7 +35,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 # Default configuration to use if configuration file is not found or unreadable. Also used for first time users.
 DEFAULT_CONFIG = {
     "locations": {"Manila": "14.5987713, 120.9833966"},
-    "activities": {"hiking": {
+    "activities": {"walking": {
             "temp_min": 18,
             "temp_max": 30,
             "rain": 0.0,

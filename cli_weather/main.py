@@ -49,8 +49,8 @@ OTHER_OPTIONS = [
     {"Back": None}]
 MAIN_OPTIONS = [
     {"View Weather Forecasts": lambda: run_menu(WEATHER_OPTIONS, "View Weather Forecasts")},
-    {"Manage Activities": lambda: run_menu(ACTIVITY_OPTIONS, "Manage Activities")},
     {"Manage Locations": lambda : run_menu(LOCATION_OPTIONS, "Manage Locations")},
+    {"Manage Activities": lambda: run_menu(ACTIVITY_OPTIONS, "Manage Activities")},
     {"Track Typhoons": lambda: view_typhoon_tracker()},
     {"Other Options": lambda: run_menu(OTHER_OPTIONS, "OTHER OPTIONS")},
     {"Exit": None}
