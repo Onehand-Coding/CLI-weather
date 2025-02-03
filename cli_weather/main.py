@@ -11,7 +11,7 @@ import time
 import logging
 from .config import CACHED_DIR, LOG_DIR, CACHE_EXPIRY, configure_logging
 from .utils import CLIWeatherException, CacheManager, run_menu, clear_logs
-from .core.weather import view_current, view_hourly, view_5day, view_certain_day, view_best_activity_day, view_oncurrent_location, view_typhoon_tracker
+from .core.weather import view_current, view_hourly, view_5day, view_certain_day, view_best_activity_day, view_typhoon_tracker
 from .core.location import view_locations, add_location, save_current_location, search_location, delete_location
 from .core.activity import view_activities, add_activity, edit_activity, delete_activity
 
@@ -25,7 +25,6 @@ WEATHER_OPTIONS = [
     {"View 5-Day Forecast": lambda: view_5day(cache_manager)},
     {"View Forecast for a Certain Day": lambda: view_certain_day(cache_manager)},
     {"View Best Day(s) for an Activity": lambda: view_best_activity_day(cache_manager)},
-    {"View Forecasts in Current Location": lambda: view_oncurrent_location(cache_manager)},
     {"Back": None}
 ]
 LOCATION_OPTIONS = [

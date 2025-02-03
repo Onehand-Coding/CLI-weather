@@ -1,9 +1,8 @@
 """Weather data handling functions."""
 import logging
-from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from typing import List, Dict, Union
+from typing import List, Dict
 from collections import defaultdict
 import requests
 from cli_weather.utils import CLIWeatherException, CacheManager, confirm, get_index, choose_local_path, run_menu
@@ -56,7 +55,7 @@ def fetch_weather_data(lat: float, lon: float, api_key: str, cache: CacheManager
         raise CLIWeatherException("Failed to fetch weather data, Unexpected request error occurred.")
 
 
-def parse_weather_data(data: Dict, forecast_type: str = "5-day") -> List[Dict]:
+def parse_weather_data(data: Dict, forecast_type: str = "5-day") -> List[Dict] | Dict:
     """Parse weather data into a list of daily, hourly, or current summaries."""
     logger.debug(f"Parsing weather data for forecast type: {forecast_type}")
     if forecast_type == "current":
@@ -190,31 +189,32 @@ def display_grouped_forecast(forecast_data: List[Dict], forecast_type: str = "da
                   f"Wind: {entry['wind_speed']:.2f} km/h, Rain: {entry['rain']} mm")
 
 
-def save_weather_to_file(location_name: str, weather_days: List[Dict], activity: str = None) -> None:
+def save_weather_to_file(location_name: str, weather_days: List[Dict], activity: str = "") -> None:
     """Saves weather forecast to a file."""
     logger.debug(f"Saving weather forecast for {location_name}...")
     forecast_file_path = choose_local_path()
-    forecast_file = forecast_file_path / f"{location_name}_{activity}_weather.txt" if activity is not None else forecast_file_path / f"{location_name}_weather.txt"
+    forecast_file = forecast_file_path / f"{location_name}_{activity}_weather.txt" if activity else forecast_file_path / f"{location_name}_weather.txt"
 
     with open(forecast_file, 'w') as file:
-        header = f"\nBest {activity.title()} Days:\n" if activity is not None else "Weather Forecast:\n"
+        header = f"\nBest {activity.title()} Days:\n" if activity else "Weather Forecast:\n"
         file.write(header)
         for day in weather_days:
             file.write(f"Date: {day['date']}, Temp: {day['temp']:.2f}°C, Weather: {day.get('weather', 'N/A').title()}, "
                        f"Wind: {day['wind_speed']:.2f} km/h, Rain: {day['rain']} mm\n")
 
-    confirm_message = f"Best Weather day(s) for {activity.title()} saved to '{forecast_file}'" if activity is not None else f"Weather forecast saved to '{forecast_file}'"
+    confirm_message = f"Best Weather day(s) for {activity.title()} saved to '{forecast_file}'" if activity else f"Weather forecast saved to '{forecast_file}'"
     logger.debug(confirm_message)
     print(confirm_message)
 
 
 def view_5day(cache: CacheManager) -> None:
     """Displays 5-day weather Forecast for a chosen location."""
-
-    location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True, add_search=True)
+    location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True, add_search=True, add_current=True)
     if location_name == "Back":  # A signal to return from previous menu.
         return
-    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+    if location_name == "Current location":  # A signal to use current location.
+        location_name, lat, lon = get_location()
+    if location_name == "Search location":  # A signal to search for a location instead of choosing from saved locations.
         print("Enter the adress to search.")
         address = input("> ").strip()
         try:  # Catch the exception early to prevent going out of weather viewing menu.
@@ -246,10 +246,12 @@ def view_best_activity_day(cache: CacheManager) -> None:
         return
     if activity == "Back":
         return
-    location_name, (lat, lon) = choose_location(task=f"to check best day(s) for {activity}", add_sensitive=True, add_search=True)
+    location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True, add_search=True, add_current=True)
     if location_name == "Back":  # A signal to return from previous menu.
         return
-    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+    if location_name == "Current location":  # A signal to use current location.
+        location_name, lat, lon = get_location()
+    if location_name == "Search location":  # A signal to search for a location instead of choosing from saved locations.
         print("Enter the adress to search.")
         address = input("> ").strip()
         try:  # Catch the exception early to prevent going out of weather viewing menu.
@@ -291,10 +293,12 @@ def view_best_activity_day(cache: CacheManager) -> None:
 
 def view_current(cache: CacheManager) -> None:
     """Displays current weather condition for chosen location."""
-    location_name, (lat, lon) = choose_location(task="to view the current weather", add_sensitive=True, add_search=True)
+    location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True, add_search=True, add_current=True)
     if location_name == "Back":  # A signal to return from previous menu.
         return
-    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+    if location_name == "Current location":  # A signal to use current location.
+        location_name, lat, lon = get_location()
+    if location_name == "Search location":  # A signal to search for a location instead of choosing from saved locations.
         print("Enter the adress to search.")
         address = input("> ").strip()
         try:  # Catch the exception early to prevent going out of weather viewing menu.
@@ -316,10 +320,12 @@ def view_current(cache: CacheManager) -> None:
 
 def view_hourly(cache: CacheManager) -> None:
     """Displays the hourly forecast for a chosen location."""
-    location_name, (lat, lon) = choose_location(task="to view the hourly weather forecast from", add_sensitive=True, add_search=True)
+    location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True, add_search=True, add_current=True)
     if location_name == "Back":  # A signal to return from previous menu.
         return
-    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+    if location_name == "Current location":  # A signal to use current location.
+        location_name, lat, lon = get_location()
+    if location_name == "Search location":  # A signal to search for a location instead of choosing from saved locations.
         print("Enter the adress to search.")
         address = input("> ").strip()
         try:  # Catch the exception early to prevent going out of weather viewing menu.
@@ -351,10 +357,12 @@ def view_certain_day(cache: CacheManager) -> None:
         index = get_index([day['date'] for day in daily_weather])
         return daily_weather[index]
 
-    location_name, (lat, lon) = choose_location(task="to view a certain day\'s weather forecast", add_sensitive=True, add_search=True)
+    location_name, (lat, lon) = choose_location(task="to view 5-day weather forecast", add_sensitive=True, add_search=True, add_current=True)
     if location_name == "Back":  # A signal to return from previous menu.
         return
-    if location_name == "Search":  # A signal to search for a location instead of choosing from saved locations.
+    if location_name == "Current location":  # A signal to use current location.
+        location_name, lat, lon = get_location()
+    if location_name == "Search location":  # A signal to search for a location instead of choosing from saved locations.
         print("Enter the adress to search.")
         address = input("> ").strip()
         try:  # Catch the exception early to prevent going out of weather viewing menu.
@@ -390,93 +398,6 @@ def view_certain_day(cache: CacheManager) -> None:
             [hour for hour in hourly_weather if hour['date'].startswith(selected_date)],
             forecast_type="hourly"
         )
-
-
-def view_oncurrent_location(cache: CacheManager) -> None:
-    """Displays various forecasts for the current location."""
-    logger.debug("viewing different weather forecast in current location...")
-    def display_oncurrent(forecast_type: str, lat: float, lon: float) -> None:
-        """Function to view forcast on current location."""
-        try:
-            raw_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type=forecast_type)
-        except CLIWeatherException as e:
-            print(f"Error: {e}")
-            return
-        if forecast_type == "current":
-            weather_data = parse_weather_data(raw_data, forecast_type="current")
-            print("\nCurrent Weather at Current Location:") # Indicate Current Location
-            print(f"Date: {weather_data['date']}, Temp: {weather_data['temp']}°C, Weather: {weather_data['weather'].title()}, "
-            f"Wind: {weather_data['wind_speed']:.2f} km/h, Rain: {weather_data['rain']} mm")
-
-        elif forecast_type == "hourly":
-            weather_data = parse_weather_data(raw_data, forecast_type="hourly")
-            print("\nHourly Forecast at Current Location (Next 24 Hours):")  # Indicate current Location
-            display_grouped_forecast(weather_data, forecast_type="hourly")
-        else: #5-Day
-            weather_data = parse_weather_data(raw_data)
-            print("\n5-Day Forecast at Current Location:")  # Indicate current Location
-            display_grouped_forecast(weather_data, forecast_type="daily")
-
-        if confirm("\nSave Weather Forecast to file?"):
-            location_name = f"location:{str(lat)},{str(lon)}"
-            save_weather_to_file(location_name, weather_data)
-
-    def view_best_activity_day_oncurrent(lat: float, lon: float) -> None:
-        """View best days for an activity for the current location."""
-        logger.debug("viewing best activity day on current location...")
-        activity = choose_activity("check")
-        if activity == "Back":
-            return
-         # Fetch daily and hourly weather data
-        try:
-            raw_daily_data = fetch_weather_data(lat, lon, API_KEY, cache, forecast_type="5-day")
-        except CLIWeatherException as e:
-            print(f"Error: {e}")
-            return
-        daily_weather = parse_weather_data(raw_daily_data)
-
-        try:
-            raw_hourly_data = fetch_weather_data(lat, lon, API_KEY, cache,  forecast_type="hourly")
-        except CLIWeatherException as e:
-            print(f"Error: {e}")
-            return
-        hourly_weather = parse_weather_data(raw_hourly_data, forecast_type="hourly")
-
-        # Get the best days for the activity.
-        best_activity_days = filter_best_days(daily_weather, activity, hourly_weather)
-
-        # Display the results if theres a good day for activity.
-        if best_activity_days:
-            print(f"\nBest Days for {activity.title()} at Current Location:")  # Indicate current location
-            display_grouped_forecast(best_activity_days, forecast_type="daily")
-
-        # Save to file if the user confirms. Indicate location in file name.
-        if best_activity_days and confirm("\nSave Weather Forecast to file?"):
-            save_weather_to_file("Current_Location", best_activity_days, activity)
-        else:
-            print(f"There's no good {activity} weather for now at the current location.")
-
-    #  Get the current location and run options to execute for this location.
-    try:
-        address, lat, lon = get_location()
-        if any(coord is None for coord in {address, lat, lon}):
-            print("Could not determine current location.")
-            return
-    except CLIWeatherException as e:
-        print(e)
-        return
-
-    options = [
-            {"View Current Weather": lambda: display_oncurrent("current", lat, lon)},
-            {"View Hourly Forecast": lambda: display_oncurrent("hourly", lat, lon)},
-            {"View 5-Day Forecast": lambda: display_oncurrent("5-day", lat, lon)},
-             {"View Best Day(s) for an Activity": lambda: view_best_activity_day_oncurrent(lat, lon)},
-            {"Back": None}
-        ]
-
-    while True:
-        run_menu(options, f"Options for current location {address}:")
-        break
 
 
 def fetch_typhoon_data(api_key: str) -> Dict:

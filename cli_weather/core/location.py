@@ -1,14 +1,13 @@
 """Location management functions."""
-import json
 import logging
 from json.decoder import JSONDecodeError
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple
 import requests
 import geopy
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError, GeocoderUnavailable, GeocoderParseError
 from ..config import VARS, load_config, save_config
-from ..utils import CLIWeatherException, confirm, get_index, choose
+from ..utils import CLIWeatherException, confirm, choose
 
 logger = logging.getLogger(__file__)
 
@@ -38,7 +37,7 @@ def is_valid_location(value: str) -> bool:
         return False
 
 
-def get_location(addr: str = "me") -> Union[Tuple[str, float, float], Tuple[None, None, None]]:
+def get_location(addr: str = "me") -> Tuple[str, float, float] | Tuple[None, None, None]:
     """Get location by address or approximate current location."""
     geopy.adapters.BaseAdapter.session = requests.Session()
 
@@ -98,8 +97,6 @@ def get_location(addr: str = "me") -> Union[Tuple[str, float, float], Tuple[None
             logger.exception(f"Unexpected geocoding error: {e}")
             raise CLIWeatherException(f"Unexpected error occurred during geocoding: {e}")
 
-    return None, None, None
-
 
 def get_location_input() -> Tuple[str, str]:
     """Gets location name and coordinates input from the user."""
@@ -123,15 +120,18 @@ def save_location(location_name: str, coordinate: str) -> None:
     logger.debug(f"{location_name} location saved successfully.")
 
 
-def choose_location(task: str = "", add_sensitive: bool = False, add_search: bool = False) -> Tuple[str, Tuple[str, str]]:
+def choose_location(task: str = "", *, add_sensitive: bool = False, add_search: bool = False, add_current: bool = False) -> Tuple[str, Tuple[str, str]] | None:
     """Prompt the user to choose a location from the saved locations."""
     locations = load_locations(add_sensitive)
     if not locations:
         print("No locations found. Please add one first.")
         return
+    # Add choice to use current location.
+    if add_current:
+        locations["Current location"] = "N, A"
     # Add choice to search for a location using an address.
     if add_search:
-        locations["Search"] = "N, A"
+        locations["Search location"] = "N, A"
     # Add choice to go back from previous menu.
     locations["Back"] = "N, A"
     print(f"\nChoose a location {task}." if not add_search else f"Choose or search a location {task}.")

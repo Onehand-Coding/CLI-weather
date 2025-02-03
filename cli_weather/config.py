@@ -29,6 +29,7 @@ CACHED_DIR = Path(__file__).resolve().parent.parent / "data/cache"
 # Create paths if they dont exist.
 CONFIG_DIR.mkdir(exist_ok=True, parents=True)
 LOG_DIR.mkdir(exist_ok=True, parents=True)
+CACHED_DIR.mkdir(exist_ok=True,  parents=True)
 
 # Configuration file for saving locations and activities.
 CONFIG_FILE = CONFIG_DIR / "config.json"

@@ -1,11 +1,8 @@
 """Activity management functions."""
 import logging
-from typing import Dict, Tuple, Union
-import requests
-import geopy
-from geopy.geocoders import Nominatim
-from ..config import VARS, UNITS, load_config, save_config
-from ..utils import CLIWeatherException, confirm, get_index, choose
+from typing import Dict
+from ..config import UNITS, load_config, save_config
+from ..utils import confirm, choose
 
 logger = logging.getLogger(__file__)
 
@@ -62,7 +59,7 @@ def get_activity_criteria(activity: str) -> Dict:
             raise
 
 
-def choose_activity(task: str = None) -> Union[str, None]:
+def choose_activity(task: str = "") -> str | None:
     """Prompts the user to choose an activity from the saved activities."""
     config = load_config()
     activities = config.get("activities", {})
