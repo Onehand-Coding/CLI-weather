@@ -1,4 +1,4 @@
-*.sublime-project-files/
+*.sublime-workspace/
 __pycache__/
 data/
 logs/
@@ -8,3 +8,4 @@ venv/
 cli_weather.egg-info/
 build/
 test_cache/
+.env
