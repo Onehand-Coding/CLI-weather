@@ -4,6 +4,7 @@ Utility functions for the CLI Weather Application.
 Provides helper functions for exception handling, caching, logging,
 user input, and menu navigation.
 """
+
 import sys
 import json
 import logging
@@ -36,7 +37,7 @@ class CacheManager:
     def save(self, key: str, data: dict) -> None:
         """Saves data to the cache with a timestamp."""
         cache_file = self.cache_dir / key
-        with cache_file.open('w') as file:
+        with cache_file.open("w") as file:
             json.dump({"timestamp": datetime.now().isoformat(), "data": data}, file)
         logger.debug("Cache file saved successfully.")
 
@@ -46,7 +47,7 @@ class CacheManager:
         if not cache_file.exists():
             return None
 
-        with cache_file.open('r') as file:
+        with cache_file.open("r") as file:
             cached = json.load(file)
             timestamp = datetime.fromisoformat(cached["timestamp"])
             if datetime.now() - timestamp < self.expiry:
@@ -102,7 +103,7 @@ def get_index(items: List) -> int:
 def choose_local_path() -> Path:
     """
     Prompts the user to choose a local folder using an interactive menu.
-    This function makes all path variables local for better scoping and 
+    This function makes all path variables local for better scoping and
     handles potential `PermissionError`.
     """
 
@@ -112,12 +113,20 @@ def choose_local_path() -> Path:
 
     def contains_subfolder(parent_path: Path) -> bool:
         """Check if a folder contains subfolder(s)."""
-        return any(file.is_dir() and not is_hidden(file) for file in parent_path.iterdir())
+        return any(
+            file.is_dir() and not is_hidden(file) for file in parent_path.iterdir()
+        )
 
     def choose_folder(parent_path: Path, prompt: str) -> Path:
         """Choose a folder inside a specified folder."""
         try:
-            subfolders = sorted([file for file in parent_path.iterdir() if file.is_dir() and not is_hidden(file)])
+            subfolders = sorted(
+                [
+                    file
+                    for file in parent_path.iterdir()
+                    if file.is_dir() and not is_hidden(file)
+                ]
+            )
 
             print(prompt)
             for index, folder in enumerate(subfolders, start=1):
@@ -126,8 +135,8 @@ def choose_local_path() -> Path:
         except PermissionError as e:
             logging.error(f"Error: no permission to access folder: {e}")
             raise CLIWeatherException("No permission to access folder.")
-    
-    main_path = Path.home() / "storage/shared" #Make these local variables.
+
+    main_path = Path.home() / "storage/shared"  # Make these local variables.
     prompt = "Choose folder to save weather forecast"
 
     while True:
@@ -135,7 +144,9 @@ def choose_local_path() -> Path:
         if confirm(f"Save weather forecast here:'{chosen_folder.name}'?"):
             return chosen_folder
         if contains_subfolder(chosen_folder):
-            while contains_subfolder(chosen_folder) and confirm(f"'{chosen_folder.name}' contains subfolders. Go deeper?"):
+            while contains_subfolder(chosen_folder) and confirm(
+                f"'{chosen_folder.name}' contains subfolders. Go deeper?"
+            ):
                 print(f"Exploring subfolders in '{chosen_folder.name}'...")
                 chosen_folder = choose_folder(chosen_folder, prompt)
 

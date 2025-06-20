@@ -2,6 +2,8 @@
 
 CLI Weather is a versatile command-line application built with Python that provides current weather information, detailed forecasts, and personalized activity recommendations. It leverages the OpenWeatherMap API to fetch up-to-date weather data and offers a user-friendly interface to manage locations and activities.
 
+This project is structured using modern Python standards, including a src layout and pyproject.toml for dependency management, and is optimized for use with the uv package manager.
+
 ## Features
 
 * **Current Weather:** Get real-time weather conditions for any chosen location.
@@ -9,6 +11,7 @@ CLI Weather is a versatile command-line application built with Python that provi
 * **5-Day Forecasts:** Plan ahead with a 5-day weather outlook.
 * **Specific Day Forecast:** Get detailed weather for a particular day within the 5-day range.
 * **Activity-Based Recommendations:** Discover the best days for your favorite activities based on customizable weather criteria (e.g., temperature, rain, wind, time of day).
+* **Typhoon Tracking & Alerts:** View active weather alerts, including typhoon warnings, for your chosen location and save them to a file.
 * **Location Management:**
     * Save and manage a list of your favorite locations.
     * Add new locations by name or coordinates.
@@ -22,28 +25,38 @@ CLI Weather is a versatile command-line application built with Python that provi
     * Option to clear cached data.
     * Option to clear application logs.
 * **Save Forecasts:** Save weather forecasts to a text file for offline viewing.
-* **Planned Features:**
-    * Typhoon Tracking (currently under development).
 
 ## Requirements
 
 * Python 3.7+
 * An OpenWeatherMap API Key
-* Dependencies listed in `requirements.txt`:
-    * `geopy==2.4.1`
-    * `python-dotenv==1.0.1`
-    * `requests==2.32.3`
-    * `tzdata==2024.2`
+* Dependencies are managed in pyproject.toml and include:
+    * geopy
+    * python-dotenv
+    * requests
+    * tzdata
 
 ## Installation
 
+This project is managed with uv for modern Python dependency management.
+
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/Phoenix1025/cli-weather.git
+   git clone https://github.com/Onehand-Coding/cli-weather.git
    cd cli-weather
    ```
 
-2. **Create and activate a virtual environment:**
+2. **Install with uv (recommended):**
+   ```bash
+   uv sync
+   ```
+   This command automatically creates a virtual environment, installs all dependencies, and sets up the project in editable mode.
+
+### Alternative Installation (Traditional Method)
+
+If you prefer to use standard Python tools:
+
+1. **Create and activate a virtual environment:**
    ```bash
    python -m venv .venv
 
@@ -54,17 +67,9 @@ CLI Weather is a versatile command-line application built with Python that provi
    .\.venv\Scripts\activate
    ```
 
-3. **Install dependencies:**
+2. **Install the project in editable mode:**
    ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Install the package (optional, for using the `cli-weather` command):**
-   ```bash
-   pip install .
-
-   # For development (editable install)
-   # pip install -e .
+   pip install -e .
    ```
 
 ## Configuration
@@ -90,7 +95,6 @@ You can also set the following optional environment variables in your `.env` fil
   ```
   MY_SECRET_SPOT=12.345,67.890
   ```
-  These will be loaded as selectable locations within the app if `add_sensitive=True` is used in code (currently handled for choosing locations for forecasts).
 
 ### Application Data
 
@@ -100,6 +104,20 @@ You can also set the following optional environment variables in your `.env` fil
 
 ## Usage
 
+Once installed, you can run the application with the uv run command:
+
+```bash
+uv run cli-weather
+```
+
+Alternatively, you can run the application as a module:
+
+```bash
+uv run python -m cli_weather
+```
+
+### Alternative Usage (without uv)
+
 If you have installed the package using `pip install .`, you can run the application with:
 ```bash
 cli-weather
@@ -107,7 +125,7 @@ cli-weather
 
 Alternatively, you can run it directly from the project's root directory:
 ```bash
-python -m cli_weather.main
+python -m cli_weather
 ```
 
 The application will then present you with a menu of options to navigate.
@@ -115,15 +133,21 @@ The application will then present you with a menu of options to navigate.
 ## Running Tests
 
 To run the unit tests for this project, navigate to the project root folder and execute:
+
+```bash
+uv run python -m unittest discover tests
+```
+
+Or without uv:
 ```bash
 python -m unittest tests.test_core
 ```
 
 ## License
 
-This project is licensed under the MIT License. See setup.py for more details.
+This project is licensed under the MIT License.
 
 ## Author
 
 Onehand Coding (onehand.coding433@gmail.com)
-GitHub Repository: [https://github.com/Phoenix1025/CLI-weather](https://github.com/Phoenix1025/CLI-weather)
+GitHub Repository: [https://github.com/Onehand-Coding/CLI-weather](https://github.com/Onehand-Coding/CLI-weather)

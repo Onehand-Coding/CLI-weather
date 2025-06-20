@@ -1,13 +1,21 @@
 """Location management functions."""
+
 import logging
-from json.decoder import JSONDecodeError
 from typing import Dict, Tuple
-import requests
+from json.decoder import JSONDecodeError
+
 import geopy
+import requests
 from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut, GeocoderServiceError, GeocoderUnavailable, GeocoderParseError
-from ..config import VARS, load_config, save_config
-from ..utils import CLIWeatherException, confirm, choose
+from geopy.exc import (
+    GeocoderTimedOut,
+    GeocoderServiceError,
+    GeocoderUnavailable,
+    GeocoderParseError,
+)
+
+from .config import VARS, load_config, save_config
+from .utils import CLIWeatherException, confirm, choose
 
 logger = logging.getLogger(__file__)
 
@@ -18,10 +26,13 @@ def load_locations(add_sensitive: bool = False) -> Dict:
     logger.debug("Loading locations...")
     non_sensitive_locations = load_config().get("locations", {})
     sensitive_locations = {
-        key: value for key, value in VARS.items()
-        if is_valid_location(value)
+        key: value for key, value in VARS.items() if is_valid_location(value)
     }
-    locations = {**sensitive_locations, **non_sensitive_locations} if add_sensitive else non_sensitive_locations
+    locations = (
+        {**sensitive_locations, **non_sensitive_locations}
+        if add_sensitive
+        else non_sensitive_locations
+    )
 
     logger.debug("Locations loaded successfully.")
     return locations
@@ -37,7 +48,9 @@ def is_valid_location(value: str) -> bool:
         return False
 
 
-def get_location(addr: str = "me") -> Tuple[str, float, float] | Tuple[None, None, None]:
+def get_location(
+    addr: str = "me",
+) -> Tuple[str, float, float] | Tuple[None, None, None]:
     """Get location by address or approximate current location."""
     geopy.adapters.BaseAdapter.session = requests.Session()
 
@@ -55,18 +68,28 @@ def get_location(addr: str = "me") -> Tuple[str, float, float] | Tuple[None, Non
                 # Use reverse geocoding to refine location details
                 geolocator = Nominatim(user_agent="weather_assistant", timeout=10)
                 location = geolocator.reverse((lat, lon), exactly_one=True)
-                address = location.address if location else "Approximate location based on IP"
+                address = (
+                    location.address if location else "Approximate location based on IP"
+                )
                 return address, lat, lon
             except (GeocoderTimedOut, GeocoderUnavailable, GeocoderServiceError) as e:
                 logger.warning(f"Reverse geocoding failed: {e}")
                 return "Approximate location based on IP", lat, lon
 
         except requests.exceptions.Timeout as e:
-            logger.error(f"Error getting current location from IP, Connection timed out: {e}")
-            raise CLIWeatherException("Failed to get your current location, Request timed out. Please check your network connection.")
+            logger.error(
+                f"Error getting current location from IP, Connection timed out: {e}"
+            )
+            raise CLIWeatherException(
+                "Failed to get your current location, Request timed out. Please check your network connection."
+            )
         except requests.exceptions.ConnectionError as e:
-            logger.error(f"Error getting current location from IP, Connection error: {e}")
-            raise CLIWeatherException("Failed to get your current location, Network error. Please check your connection and try again.")
+            logger.error(
+                f"Error getting current location from IP, Connection error: {e}"
+            )
+            raise CLIWeatherException(
+                "Failed to get your current location, Network error. Please check your connection and try again."
+            )
         except (requests.exceptions.RequestException, JSONDecodeError) as e:
             logger.exception(f"Error Getting current location: {e}")
             raise CLIWeatherException("Could not get current location.")
@@ -86,7 +109,9 @@ def get_location(addr: str = "me") -> Tuple[str, float, float] | Tuple[None, Non
             raise CLIWeatherException(f"Failed to find {addr}. Geocoding timed out.")
         except GeocoderUnavailable as e:
             logger.error(f"Failed to find location: {addr} Geocoder unavailable: {e}")
-            raise CLIWeatherException(f"Failed to find {addr}. Geocoding service unavailable.")
+            raise CLIWeatherException(
+                f"Failed to find {addr}. Geocoding service unavailable."
+            )
         except GeocoderServiceError as e:
             logger.error(f"Failed to find {addr} Geocoding service Error: {e}")
             raise CLIWeatherException(f"Failed to find {addr} Geocoding service error.")
@@ -95,7 +120,9 @@ def get_location(addr: str = "me") -> Tuple[str, float, float] | Tuple[None, Non
             raise CLIWeatherException("Failed to parse geocoding response.")
         except Exception as e:
             logger.exception(f"Unexpected geocoding error: {e}")
-            raise CLIWeatherException(f"Unexpected error occurred during geocoding: {e}")
+            raise CLIWeatherException(
+                f"Unexpected error occurred during geocoding: {e}"
+            )
 
 
 def get_location_input() -> Tuple[str, str]:
@@ -103,7 +130,9 @@ def get_location_input() -> Tuple[str, str]:
     try:
         while True:
             location_name = input("Enter location name: ")
-            print("Enter comma separated coordinates Lat/Long (Deg), e.g., 1.599, 12.6168")
+            print(
+                "Enter comma separated coordinates Lat/Long (Deg), e.g., 1.599, 12.6168"
+            )
             coordinate = input("> ")
             if is_valid_location(coordinate) and confirm("Done?"):
                 return (location_name, coordinate)
@@ -120,7 +149,13 @@ def save_location(location_name: str, coordinate: str) -> None:
     logger.debug(f"{location_name} location saved successfully.")
 
 
-def choose_location(task: str = "", *, add_sensitive: bool = False, add_search: bool = False, add_current: bool = False) -> Tuple[str, Tuple[str, str]] | None:
+def choose_location(
+    task: str = "",
+    *,
+    add_sensitive: bool = False,
+    add_search: bool = False,
+    add_current: bool = False,
+) -> Tuple[str, Tuple[str, str]] | None:
     """Prompt the user to choose a location from the saved locations."""
     locations = load_locations(add_sensitive)
     if not locations:
@@ -134,7 +169,11 @@ def choose_location(task: str = "", *, add_sensitive: bool = False, add_search: 
         locations["Search location"] = "N, A"
     # Add choice to go back from previous menu.
     locations["Back"] = "N, A"
-    print(f"\nChoose a location {task}." if not add_search else f"Choose or search a location {task}.")
+    print(
+        f"\nChoose a location {task}."
+        if not add_search
+        else f"Choose or search a location {task}."
+    )
     location_name = choose(list(locations))
     lat, lon = locations[location_name].split(",")
     return location_name, (lat.strip(), lon.strip())
@@ -210,7 +249,7 @@ def delete_location() -> None:
     if location_name == "Back":
         return
     if confirm(f"Are you sure you want to delete '{location_name}'?"):
-            config = load_config()
-            del config["locations"][location_name]
-            save_config(config)
-            print(f"\n'{location_name}' deleted successfully.")
+        config = load_config()
+        del config["locations"][location_name]
+        save_config(config)
+        print(f"\n'{location_name}' deleted successfully.")

@@ -6,6 +6,7 @@ logs/
 venv/
 .envbuild/
 cli_weather.egg-info/
+.ruff_cache/
 build/
 test_cache/
 .env

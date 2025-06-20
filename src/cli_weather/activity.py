@@ -1,8 +1,10 @@
 """Activity management functions."""
+
 import logging
 from typing import Dict
-from ..config import UNITS, load_config, save_config
-from ..utils import confirm, choose
+
+from .config import UNITS, load_config, save_config
+from .utils import confirm, choose
 
 logger = logging.getLogger(__file__)
 
@@ -34,25 +36,29 @@ def get_activity_criteria(activity: str) -> Dict:
 
             time_range = None
             if confirm("Is this a time-specific activity?"):
-                time_start = input("Enter start time (HH:MM, 24-hour format, e.g., 06:00): ").strip()
-                time_end = input("Enter end time (HH:MM, 24-hour format, e.g., 12:00): ").strip()
+                time_start = input(
+                    "Enter start time (HH:MM, 24-hour format, e.g., 06:00): "
+                ).strip()
+                time_end = input(
+                    "Enter end time (HH:MM, 24-hour format, e.g., 12:00): "
+                ).strip()
                 time_range = [time_start, time_end]
 
             print(f"""\nNew {activity.title()} Criteria:
                 Temp: {temp_min}-{temp_max} °C
                 Rain: {rain} mm
-                Wind: {wind_min or 'N/A'}-{wind_max} km/h,
-                Time: {(time_range) if time_range else 'All Day'}\n""")
+                Wind: {wind_min or "N/A"}-{wind_max} km/h,
+                Time: {(time_range) if time_range else "All Day"}\n""")
 
             if confirm("Done?"):
                 return {
-                "temp_min": temp_min,
-                "temp_max": temp_max,
-                "rain": rain,
-                "wind_min": wind_min,  # Include minimum wind speed
-                "wind_max": wind_max,  # Rename for clarity
-                "time_range": time_range or ["00:00", "23:59"]
-            }
+                    "temp_min": temp_min,
+                    "temp_max": temp_max,
+                    "rain": rain,
+                    "wind_min": wind_min,  # Include minimum wind speed
+                    "wind_max": wind_max,  # Rename for clarity
+                    "time_range": time_range or ["00:00", "23:59"],
+                }
         except ValueError:
             print("Please enter a valid value.")
         except KeyboardInterrupt:
@@ -89,7 +95,9 @@ def view_activities() -> None:
         for key, value in criteria.items():
             unit = UNITS.get(key, "")
             if isinstance(value, list) and len(value) == 2:
-                print(f"\t\t{key.replace('_', ' ').title()}: {value[0]} to {value[1]} {unit}")
+                print(
+                    f"\t\t{key.replace('_', ' ').title()}: {value[0]} to {value[1]} {unit}"
+                )
             else:
                 print(f"\t\t{key.replace('_', ' ').title()}: {value} {unit}")
 
@@ -116,7 +124,9 @@ def edit_activity() -> None:
     print(f"Current criteria for {activity_name.title()}:")
     for key, value in current_criteria.items():
         unit = UNITS.get(key, "")
-        if isinstance(value, list) and len(value) == 2:  # Handle range values like time_range
+        if (
+            isinstance(value, list) and len(value) == 2
+        ):  # Handle range values like time_range
             print(f"  {key.replace('_', ' ').title()}: {value[0]} to {value[1]} {unit}")
         else:
             print(f"  {key.replace('_', ' ').title()}: {value} {unit}")
@@ -135,12 +145,14 @@ def delete_activity() -> None:
     if activity_name == "Back":
         return
     config = load_config()
-    activities= config.get("activities")
+    activities = config.get("activities")
     if not activities:
         logger.error("No activities configured.")
         print("No activities found, Please add one first.")
         return
-    if confirm(f"Do you want to remove this activity? {activity_name}:  {activities[activity_name]}"):
+    if confirm(
+        f"Do you want to remove this activity? {activity_name}:  {activities[activity_name]}"
+    ):
         del config["activities"][activity_name]
         save_config(config)
         print(f"\n{activity_name.title()} activity removed successfully.")

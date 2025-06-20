@@ -6,14 +6,29 @@ This module initializes the application, handles user interaction, and manages
 the main menu loop. It integrates with other modules for weather data retrieval,
 location management, activity configuration, and utility functions.
 """
+
 import sys
 import time
 import logging
+
 from .config import CACHED_DIR, LOG_DIR, CACHE_EXPIRY, configure_logging
 from .utils import CLIWeatherException, CacheManager, run_menu, clear_logs
-from .core.weather import view_current, view_hourly, view_5day, view_certain_day, view_best_activity_day, view_typhoon_tracker
-from .core.location import view_locations, add_location, save_current_location, search_location, delete_location
-from .core.activity import view_activities, add_activity, edit_activity, delete_activity
+from .weather import (
+    view_current,
+    view_hourly,
+    view_5day,
+    view_certain_day,
+    view_best_activity_day,
+    view_typhoon_tracker,
+)
+from .location import (
+    view_locations,
+    add_location,
+    save_current_location,
+    search_location,
+    delete_location,
+)
+from .activity import view_activities, add_activity, edit_activity, delete_activity
 
 # Use caching for fetching weather data.
 cache_manager = CacheManager(CACHED_DIR, CACHE_EXPIRY)
@@ -25,7 +40,7 @@ WEATHER_OPTIONS = [
     {"View 5-Day Forecast": lambda: view_5day(cache_manager)},
     {"View Forecast for a Certain Day": lambda: view_certain_day(cache_manager)},
     {"View Best Day(s) for an Activity": lambda: view_best_activity_day(cache_manager)},
-    {"Back": None}
+    {"Back": None},
 ]
 LOCATION_OPTIONS = [
     {"View locations": lambda: view_locations()},
@@ -33,26 +48,31 @@ LOCATION_OPTIONS = [
     {"Save Current Location": lambda: save_current_location()},
     {"Search a location": lambda: search_location()},
     {"Delete a location": lambda: delete_location()},
-    {"Back": None}
+    {"Back": None},
 ]
 ACTIVITY_OPTIONS = [
     {"View Activities": lambda: view_activities()},
     {"Add Activity": lambda: add_activity()},
     {"Edit Activity": lambda: edit_activity()},
     {"Delete Activity": lambda: delete_activity()},
-    {"Back": None}
+    {"Back": None},
 ]
 OTHER_OPTIONS = [
     {"Clear cached data": lambda: cache_manager.clear()},
     {"Clear logs": lambda: clear_logs(LOG_DIR)},
-    {"Back": None}]
+    {"Back": None},
+]
 MAIN_OPTIONS = [
-    {"View Weather Forecasts": lambda: run_menu(WEATHER_OPTIONS, "View Weather Forecasts")},
-    {"Manage Locations": lambda : run_menu(LOCATION_OPTIONS, "Manage Locations")},
+    {
+        "View Weather Forecasts": lambda: run_menu(
+            WEATHER_OPTIONS, "View Weather Forecasts"
+        )
+    },
+    {"Manage Locations": lambda: run_menu(LOCATION_OPTIONS, "Manage Locations")},
     {"Manage Activities": lambda: run_menu(ACTIVITY_OPTIONS, "Manage Activities")},
     {"Track Typhoons": lambda: view_typhoon_tracker()},
     {"Other Options": lambda: run_menu(OTHER_OPTIONS, "OTHER OPTIONS")},
-    {"Exit": None}
+    {"Exit": None},
 ]
 
 
