@@ -10,3 +10,4 @@ cli_weather.egg-info/
 build/
 test_cache/
 .env
+.pytest_cache/
