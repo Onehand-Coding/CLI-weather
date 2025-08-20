@@ -1,8 +1,8 @@
 # CLI Weather - Your Command-Line Weather Companion
 
-CLI Weather is a versatile command-line application built with Python that provides current weather information, detailed forecasts, and personalized activity recommendations. It leverages the OpenWeatherMap API to fetch up-to-date weather data and offers a user-friendly interface to manage locations and activities.
+CLI Weather is a versatile command-line application built with Python that provides current weather information, detailed forecasts, and personalized activity recommendations. It leverages the OpenWeatherMap API to fetch up-to-date weather data and offers multiple user interfaces to suit different use cases.
 
-This project is structured using modern Python standards, including a src layout and pyproject.toml for dependency management, and is optimized for use with the uv package manager.
+This project follows modern Python architecture with clean separation of concerns, multiple UI implementations, and is optimized for use with the uv package manager.
 
 ## Features
 
@@ -28,13 +28,15 @@ This project is structured using modern Python standards, including a src layout
 
 ## Requirements
 
-* Python 3.7+
+* Python 3.10+
 * An OpenWeatherMap API Key
 * Dependencies are managed in pyproject.toml and include:
-    * geopy
-    * python-dotenv
-    * requests
-    * tzdata
+    * geopy - Location geocoding and geospatial calculations
+    * python-dotenv - Environment variable management
+    * requests - HTTP client for weather API calls
+    * tzdata - Timezone data
+    * rich - Enhanced terminal output with modern styling
+    * typer - Command-line interface framework
 
 ## Installation
 
@@ -104,43 +106,180 @@ You can also set the following optional environment variables in your `.env` fil
 
 ## Usage
 
-Once installed, you can run the application with the uv run command:
+CLI Weather offers multiple user interfaces to suit different workflows and preferences:
+
+### 🎨 Rich Interactive UI (Default)
+
+Launches a modern, interactive menu system with enhanced visuals, tables, progress bars, and styled output:
 
 ```bash
-uv run cli-weather
-```
-
-Alternatively, you can run the application as a module:
-
-```bash
+uv run cli-weather                    # Default mode
+# or
 uv run python -m cli_weather
+# or
+cli-weather                           # If installed with pip
 ```
 
-### Alternative Usage (without uv)
+### ⚡ Command Line Interface (Typer)
 
-If you have installed the package using `pip install .`, you can run the application with:
+For automation, scripting, and direct command execution:
+
 ```bash
-cli-weather
+# Weather commands
+uv run cli-weather weather current --current
+uv run cli-weather weather daily --location "New York"
+uv run cli-weather weather hourly --lat 40.7128 --lon -74.0060
+uv run cli-weather weather day 3 --location "Denver" --hourly
+uv run cli-weather weather activity hiking --current
+uv run cli-weather weather alerts --current
+
+# Location management
+uv run cli-weather location list
+uv run cli-weather location add "Home" --lat 40.7128 --lon -74.0060
+uv run cli-weather location current --name "My Location"
+uv run cli-weather location search "Tokyo"
+
+# Activity management
+uv run cli-weather activity list
+uv run cli-weather activity add "jogging" --temp-min 15 --temp-max 25 --rain 0
+uv run cli-weather activity show hiking
+
+# Configuration
+uv run cli-weather config clear-cache
+uv run cli-weather config clear-logs
 ```
 
-Alternatively, you can run it directly from the project's root directory:
+### 🔄 Legacy Mode
+
+For backwards compatibility with the original interface:
+
 ```bash
-python -m cli_weather
+uv run cli-weather --legacy
 ```
 
-The application will then present you with a menu of options to navigate.
+### 📋 Command Line Options
+
+**Common Location Options:**
+- `--location NAME` or `-l NAME`: Use a saved location
+- `--current` or `-c`: Auto-detect current location via IP
+- `--lat LAT --lon LON`: Use specific coordinates
+
+**Output Options:**
+- `--json`: Output data in JSON format (CLI mode only)
+- `--output FILE` or `-o FILE`: Save results to file
+- `--hours N`: Number of hours for hourly forecasts (1-120)
+- `--hourly`: Show hourly details for specific day forecasts
+
+**Activity Options:**
+- `--temp-min N`: Minimum temperature in Celsius
+- `--temp-max N`: Maximum temperature in Celsius
+- `--rain N`: Maximum rainfall in mm
+- `--wind-min N`: Minimum wind speed in km/h
+- `--wind-max N`: Maximum wind speed in km/h
+- `--start HH:MM`: Activity start time
+- `--end HH:MM`: Activity end time
+
+**Examples:**
+
+```bash
+# Get current weather for saved location
+uv run cli-weather weather current -l "New York"
+
+# Get 5-day forecast for current location
+uv run cli-weather weather daily --current
+
+# Get specific day with hourly details
+uv run cli-weather weather day 2 --current --hourly
+
+# Find best days for activity with JSON output
+uv run cli-weather weather activity hiking --current --json
+
+# Get hourly forecast and save to file
+uv run cli-weather weather hourly --lat 35.6762 --lon 139.6503 -o forecast.txt
+
+# Add location by address geocoding
+uv run cli-weather location add "Office" --address "Times Square, New York"
+```
+
+### 💡 Getting Help
+
+```bash
+# General help
+uv run cli-weather --help
+
+# Command-specific help
+uv run cli-weather weather --help
+uv run cli-weather location --help
+uv run cli-weather activity --help
+```
+
+## Architecture
+
+CLI Weather follows a clean, modular architecture with clear separation of concerns:
+
+### 🏗️ Project Structure
+
+```
+src/cli_weather/
+├── core/                    # Pure business logic (no UI concerns)
+│   ├── app.py              # Main app orchestrator
+│   ├── weather_service.py   # Weather API and data processing
+│   ├── location_service.py  # Location management and geocoding
+│   ├── activity_service.py  # Activity criteria management
+│   ├── config_service.py    # Configuration management
+│   ├── cache_service.py     # Data caching
+│   ├── models.py           # Data models (Location, Activity, WeatherData)
+│   └── exceptions.py       # Custom exceptions
+├── ui/                     # UI layer (multiple implementations)
+│   ├── rich_ui.py          # Rich-based interactive UI
+│   └── typer_cli.py        # Typer-based command-line UI
+├── legacy/                 # Original mixed-concern modules
+└── __main__.py             # Main entry point with UI selection
+```
+
+### 🧩 Core Principles
+
+1. **Separation of Concerns**: Business logic is completely isolated from UI concerns
+2. **Multiple UI Support**: Same core functionality accessible through different interfaces
+3. **Dependency Injection**: Services are injected rather than directly instantiated
+4. **Clean Data Models**: Well-defined data structures for all entities
+5. **Comprehensive Testing**: Full test coverage of business logic with proper mocking
+6. **Error Handling**: Consistent error handling across all layers
+
+### 📊 Data Flow
+
+```
+UI Layer → App Orchestrator → Services → External APIs/Storage
+  │              │              │              │
+ Rich UI       WeatherApp    Weather     OpenWeatherMap
+ Typer CLI                   Location    Nominatim
+ Legacy UI                   Activity    Config Files
+                             Cache       File System
+```
+
+### 🔌 Services Overview
+
+- **WeatherService**: Handles all weather-related operations (API calls, data parsing, caching)
+- **LocationService**: Manages locations (geocoding, IP-based detection, persistence)
+- **ActivityService**: Manages activity criteria and weather filtering
+- **ConfigService**: Handles configuration persistence and retrieval
+- **CacheService**: Manages data caching with expiration
 
 ## Running Tests
 
-To run the unit tests for this project, navigate to the project root folder and execute:
+The test suite covers all core business logic with comprehensive mocking:
 
 ```bash
+# Run all tests
 uv run python -m unittest discover tests
-```
 
-Or without uv:
-```bash
-python -m unittest tests.test_core
+# Run specific test files
+uv run python -m unittest tests.test_services  # Core services
+uv run python -m unittest tests.test_ui        # UI components
+uv run python -m unittest tests.test_core      # Legacy tests
+
+# Or without uv
+python -m unittest discover tests
 ```
 
 ## License
