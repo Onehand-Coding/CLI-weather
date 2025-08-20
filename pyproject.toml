@@ -24,6 +24,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff>=0.6",        # Linting and formatting
+    "pytest>=7.0.0",    # Testing framework
 ]
 
 # CLI entry point

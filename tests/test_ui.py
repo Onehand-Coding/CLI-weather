@@ -12,7 +12,7 @@ import sys
 
 from cli_weather.core.models import Location
 from cli_weather.core.weather_service import WeatherData
-from cli_weather.utils import CLIWeatherException
+from cli_weather.core.exceptions import WeatherAppError
 
 
 class TestRichUI(unittest.TestCase):
@@ -133,52 +133,56 @@ class TestTyperCLI(unittest.TestCase):
         self.assertIsNotNone(cli)
         self.assertIsNotNone(cli.app)
     
-    def test_get_location_by_name_existing(self):
+    @patch('cli_weather.ui.typer_cli.weather_service')  # Patch the global weather_service instance
+    def test_get_location_by_name_existing(self, mock_weather_service):
         """Test getting location by name when it exists."""
         from cli_weather.ui.typer_cli import get_location_by_name
         
         # Mock locations
         mock_location = Location("New York", 40.7128, -74.0060)
-        self.mock_app.get_locations.return_value = {"New York": mock_location}
+        mock_weather_service.get_locations.return_value = {"New York": mock_location}
         
         result = get_location_by_name("New York")
         
         self.assertEqual(result, mock_location)
     
-    def test_get_location_by_name_not_found(self):
+    @patch('cli_weather.ui.typer_cli.weather_service')
+    def test_get_location_by_name_not_found(self, mock_weather_service):
         """Test getting location by name when it doesn't exist."""
         from cli_weather.ui.typer_cli import get_location_by_name
         import typer
         
         # Mock empty locations
-        self.mock_app.get_locations.return_value = {}
+        mock_weather_service.get_locations.return_value = {}
         
         with self.assertRaises(typer.BadParameter):
             get_location_by_name("NonExistent")
     
-    def test_get_location_from_args_current(self):
+    @patch('cli_weather.ui.typer_cli.weather_service')
+    def test_get_location_from_args_current(self, mock_weather_service):
         """Test getting location from args using current location."""
         from cli_weather.ui.typer_cli import get_location_from_args
         
         mock_location = Location("Current", 40.0, -74.0)
-        self.mock_app.get_current_location.return_value = mock_location
+        mock_weather_service.get_current_location.return_value = mock_location
         
         result = get_location_from_args(current=True)
         
         self.assertEqual(result, mock_location)
-        self.mock_app.get_current_location.assert_called_once()
+        mock_weather_service.get_current_location.assert_called_once()
     
-    def test_get_location_from_args_coordinates(self):
+    @patch('cli_weather.ui.typer_cli.weather_service')
+    def test_get_location_from_args_coordinates(self, mock_weather_service):
         """Test getting location from coordinates."""
         from cli_weather.ui.typer_cli import get_location_from_args
         
         mock_location = Location("Custom Location", 40.0, -74.0)
-        self.mock_app.create_location_from_coordinates.return_value = mock_location
+        mock_weather_service.create_location_from_coordinates.return_value = mock_location
         
         result = get_location_from_args(latitude=40.0, longitude=-74.0)
         
         self.assertEqual(result, mock_location)
-        self.mock_app.create_location_from_coordinates.assert_called_once_with(
+        mock_weather_service.create_location_from_coordinates.assert_called_once_with(
             "Custom Location", 40.0, -74.0
         )
     

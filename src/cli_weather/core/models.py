@@ -17,6 +17,10 @@ class Location:
         """Return location as (lat, lon) tuple."""
         return (self.latitude, self.longitude)
     
+    def to_coord_string(self) -> str:
+        """Return location as coordinate string 'lat, lon'."""
+        return f"{self.latitude}, {self.longitude}"
+    
     @classmethod
     def from_coordinates(cls, name: str, coordinates: str) -> "Location":
         """Create Location from coordinate string 'lat, lon'."""

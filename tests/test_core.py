@@ -8,9 +8,9 @@ from unittest.mock import patch, mock_open
 import requests
 import geopy.exc
 
-from cli_weather.config import load_config, save_config, CONFIG_FILE
-from cli_weather.utils import CacheManager, CLIWeatherException, choose_local_path
-from cli_weather.weather import (
+from cli_weather.legacy.config import load_config, save_config, CONFIG_FILE
+from cli_weather.legacy.utils import CacheManager, CLIWeatherException, choose_local_path
+from cli_weather.legacy.weather import (
     fetch_weather_data,
     parse_weather_data,
     filter_best_days,
@@ -19,14 +19,14 @@ from cli_weather.weather import (
     fetch_typhoon_data,
     view_typhoon_tracker,
 )
-from cli_weather.location import (
+from cli_weather.legacy.location import (
     load_locations,
     is_valid_location,
     get_location,
     save_location,
     view_locations,
 )
-from cli_weather.activity import (
+from cli_weather.legacy.activity import (
     save_activity,
     get_activity_criteria,
     view_activities,
@@ -73,7 +73,7 @@ class TestWeather(unittest.TestCase):
             file.unlink()
         self.cache_dir.rmdir()
 
-    @patch("cli_weather.weather.requests.get")
+    @patch("cli_weather.legacy.weather.requests.get")
     def test_fetch_weather_data_cached(self, mock_get):
         key = self.cache._generate_key(0, 0, "5-day")
         self.cache.save(key, SAMPLE_WEATHER_DATA)
@@ -81,7 +81,7 @@ class TestWeather(unittest.TestCase):
         self.assertEqual(data, SAMPLE_WEATHER_DATA)
         mock_get.assert_not_called()
 
-    @patch("cli_weather.weather.requests.get")
+    @patch("cli_weather.legacy.weather.requests.get")
     def test_fetch_weather_data_api(self, mock_get):
         mock_response = mock_get.return_value
         mock_response.status_code = 200
@@ -99,7 +99,7 @@ class TestWeather(unittest.TestCase):
         self.assertLessEqual(datetime.now() - timestamp, timedelta(minutes=30))
         self.assertEqual(cached_data["data"], SAMPLE_WEATHER_DATA)
 
-    @patch("cli_weather.weather.requests.get")
+    @patch("cli_weather.legacy.weather.requests.get")
     def test_fetch_weather_data_timeout(self, mock_get):
         mock_get.side_effect = requests.exceptions.Timeout
         with self.assertRaisesRegex(CLIWeatherException, "Request timed out"):
@@ -139,10 +139,10 @@ class TestWeather(unittest.TestCase):
 
     #        best_days = filter_best_days(daily_weather, "hiking", hourly_weather) # Ensure hiking is defined in your mock config.
 
-    @patch("cli_weather.weather.open", new_callable=mock_open)
-    @patch("cli_weather.weather.choose_local_path")  # Adjusted patch path
-    @patch("cli_weather.utils.confirm")
-    @patch("cli_weather.utils.get_index")
+    @patch("cli_weather.legacy.weather.open", new_callable=mock_open)
+    @patch("cli_weather.legacy.weather.choose_local_path")  # Adjusted patch path
+    @patch("cli_weather.legacy.utils.confirm")
+    @patch("cli_weather.legacy.utils.get_index")
     def test_save_weather_to_file(
         self, mock_get_index, mock_confirm, mock_choose_local_path, mock_file
     ):
@@ -165,7 +165,7 @@ class TestWeather(unittest.TestCase):
         expected_file = self.cache_dir / "London_weather.txt"
         mock_file.assert_called_once_with(expected_file, "w")
 
-    @patch("cli_weather.weather.print")  # Mock 'print' to capture output
+    @patch("cli_weather.legacy.weather.print")  # Mock 'print' to capture output
     def test_display_grouped_forecast(self, mock_print):
         sample_forecast = [
             {
@@ -192,7 +192,7 @@ class TestWeather(unittest.TestCase):
 
 
 class TestLocation(unittest.TestCase):
-    @patch("cli_weather.location.load_config")
+    @patch("cli_weather.legacy.location.load_config")
     def test_load_locations(self, mock_load_config):
         mock_load_config.return_value = SAMPLE_CONFIG_DATA
         locations = load_locations()
@@ -207,8 +207,8 @@ class TestLocation(unittest.TestCase):
         self.assertFalse(is_valid_location("91,0, 10"))  # invalid coordinate
         self.assertFalse(is_valid_location("50.2, 181"))  # Invalid coordinate
 
-    @patch("cli_weather.location.Nominatim")
-    @patch("cli_weather.location.requests.get")
+    @patch("cli_weather.legacy.location.Nominatim")
+    @patch("cli_weather.legacy.location.requests.get")
     def test_get_location_current(self, mock_requests_get, mock_nominatim):
         # mocking current location data from ipinfo.io
         mock_response = mock_requests_get.return_value
@@ -233,7 +233,7 @@ class TestLocation(unittest.TestCase):
         self.assertEqual(lat, 12.34)
         self.assertEqual(lon, 56.78)
 
-    @patch("cli_weather.location.Nominatim")
+    @patch("cli_weather.legacy.location.Nominatim")
     def test_get_location_address(self, MockNominatim):
         geolocator_mock = MockNominatim.return_value
         geolocator_mock.geocode.return_value.address = "123 Main St, Anytown"
@@ -257,7 +257,7 @@ class TestLocation(unittest.TestCase):
                 json.dump(SAMPLE_CONFIG_DATA, f)
 
             with patch(
-                "cli_weather.config.CONFIG_FILE", temp_config_path
+                "cli_weather.legacy.config.CONFIG_FILE", temp_config_path
             ):  # Patch CONFIG_FILE
                 save_location("My Location", "1.23, 4.56")
 
@@ -268,7 +268,7 @@ class TestLocation(unittest.TestCase):
                 )
 
     @patch("builtins.print")
-    @patch("cli_weather.location.load_locations")
+    @patch("cli_weather.legacy.location.load_locations")
     def test_view_locations(self, mock_load_locations, mock_print):
         # Test case 1: Locations exist
         mock_load_locations.return_value = SAMPLE_CONFIG_DATA["locations"]
@@ -287,14 +287,14 @@ class TestLocation(unittest.TestCase):
 class TestActivity(unittest.TestCase):
     # Mock necessary functions and data where required.
 
-    @patch("cli_weather.activity.open", mock_open())
+    @patch("cli_weather.legacy.activity.open", mock_open())
     def test_save_activity(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_config_path = Path(temp_dir) / "config.json"
             with open(temp_config_path, "w") as f:
                 json.dump(SAMPLE_CONFIG_DATA, f)
 
-            with patch("cli_weather.config.CONFIG_FILE", temp_config_path):
+            with patch("cli_weather.legacy.config.CONFIG_FILE", temp_config_path):
                 new_activity = {
                     "temp_min": 20,
                     "temp_max": 30,
@@ -316,7 +316,7 @@ class TestActivity(unittest.TestCase):
         criteria = get_activity_criteria("hiking")
         self.assertEqual(criteria["temp_min"], 15)
 
-    @patch("cli_weather.activity.load_config")  # Mock config data
+    @patch("cli_weather.legacy.activity.load_config")  # Mock config data
     @patch("builtins.print")  # Mock print
     def test_view_activities(self, mock_print, mock_load_config):
         # Test case 1: Activities exist
@@ -334,7 +334,7 @@ class TestActivity(unittest.TestCase):
             "No activities found. Please add an activity first."
         )
 
-    @patch("cli_weather.activity.load_config")
+    @patch("cli_weather.legacy.activity.load_config")
     @patch(
         "builtins.input", side_effect=["1"]
     )  # Mocking user input to choose the first option
@@ -394,22 +394,24 @@ class TestTyphoonTracking(unittest.TestCase):
         with self.assertRaises(CLIWeatherException):
             fetch_typhoon_data(self.api_key, self.lat, self.lon)
 
-    @patch("cli_weather.weather.fetch_typhoon_data")
-    @patch("cli_weather.weather.choose_location")
+    @patch("cli_weather.legacy.weather.fetch_typhoon_data")
+    @patch("cli_weather.legacy.weather.choose_location")
+    @patch("builtins.input")  # Mock input to prevent stdin reading
     def test_view_typhoon_tracker_with_alerts(
-        self, mock_choose_location, mock_fetch_data
+        self, mock_input, mock_choose_location, mock_fetch_data
     ):
         """Test viewing typhoon tracker with active alerts."""
         mock_choose_location.return_value = ("Manila", (self.lat, self.lon))
         mock_fetch_data.return_value = self.mock_response
+        mock_input.return_value = "n"  # Respond 'no' to save prompt
 
         with patch("builtins.print") as mock_print:
             view_typhoon_tracker()
             mock_print.assert_any_call("\nWeather Alerts for Manila:")
             mock_print.assert_any_call("Alert: Typhoon Warning")
 
-    @patch("cli_weather.weather.fetch_typhoon_data")
-    @patch("cli_weather.weather.choose_location")
+    @patch("cli_weather.legacy.weather.fetch_typhoon_data")
+    @patch("cli_weather.legacy.weather.choose_location")
     def test_view_typhoon_tracker_no_alerts(
         self, mock_choose_location, mock_fetch_data
     ):

@@ -265,22 +265,92 @@ UI Layer → App Orchestrator → Services → External APIs/Storage
 - **ConfigService**: Handles configuration persistence and retrieval
 - **CacheService**: Manages data caching with expiration
 
-## Running Tests
+## Testing
 
-The test suite covers all core business logic with comprehensive mocking:
+CLI Weather includes a comprehensive test suite covering all core business logic with proper mocking and isolation. The tests are designed to validate the separation of concerns and ensure reliability across different components.
+
+### 🧪 Test Framework & Setup
+
+The project uses **pytest** for testing with development dependencies managed through the `dev` extra group:
 
 ```bash
-# Run all tests
-uv run python -m unittest discover tests
+# Install with development dependencies
+uv sync --extra dev
+
+# Or add dev dependencies to existing installation
+uv sync --extra dev
+```
+
+### 🏃 Running Tests
+
+```bash
+# Run all tests with pytest (recommended)
+uv run pytest
+
+# Run tests with verbose output
+uv run pytest -v
 
 # Run specific test files
-uv run python -m unittest tests.test_services  # Core services
-uv run python -m unittest tests.test_ui        # UI components
-uv run python -m unittest tests.test_core      # Legacy tests
+uv run pytest tests/test_services.py    # Core business logic services
+uv run pytest tests/test_ui.py          # UI components and CLI
+uv run pytest tests/test_core.py        # Legacy functionality
 
-# Or without uv
-python -m unittest discover tests
+# Run tests for specific functionality
+uv run pytest tests/test_services.py::TestWeatherService
+uv run pytest tests/test_services.py::TestLocationService::test_geocode_address
+
+# Alternative: Run with unittest discovery
+uv run python -m unittest discover tests
 ```
+
+### 📋 Test Coverage
+
+The test suite includes **74 comprehensive tests** covering:
+
+#### Core Services (`test_services.py`)
+- **WeatherService**: API integration, data parsing, caching, activity filtering
+- **LocationService**: Geocoding, coordinate validation, location management
+- **ActivityService**: Activity criteria management, CRUD operations
+- **WeatherApp**: Application orchestration and service integration
+- **Data Models**: Location, Activity, and WeatherData model validation
+- **CacheService**: Data caching with expiration and cleanup
+
+#### UI Components (`test_ui.py`)
+- **Rich UI**: Interactive menu system, weather displays, formatting
+- **Typer CLI**: Command-line parsing, argument handling, output formatting
+- **Main Entry**: UI mode detection, help system, command routing
+
+#### Legacy Functionality (`test_core.py`)
+- **Weather Operations**: API calls, data processing, forecast parsing
+- **Location Management**: Address geocoding, coordinate handling, persistence
+- **Activity Management**: Criteria definition, weather filtering
+- **Typhoon Tracking**: Alert fetching, data processing, user interaction
+
+### 🔧 Test Features
+
+- **Comprehensive Mocking**: All external dependencies (APIs, file system, network) are mocked
+- **Isolation**: Each test runs independently with proper setup and teardown
+- **Edge Cases**: Tests cover error conditions, invalid inputs, and boundary cases
+- **Data Validation**: Ensures data models work correctly with various inputs
+- **UI Testing**: Validates both Rich interactive UI and Typer CLI functionality
+- **Float Precision**: Uses appropriate precision handling for coordinate comparisons
+
+### 🚫 Test Dependencies
+
+Tests are designed to run without:
+- External API keys (all API calls are mocked)
+- Network connectivity (no real HTTP requests)
+- File system modifications (temporary directories used)
+- User input (interactive prompts are mocked)
+
+This ensures tests can run in CI/CD environments and isolated development setups.
+
+### 📊 Test Configuration
+
+Test configuration is managed in `pyproject.toml`:
+- pytest configuration with test discovery
+- Development dependencies including pytest
+- Proper Python path configuration for imports
 
 ## License
 
