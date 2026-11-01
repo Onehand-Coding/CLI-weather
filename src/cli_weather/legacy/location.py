@@ -1,21 +1,21 @@
 """Location management functions."""
 
 import logging
-from typing import Dict, Tuple
 from json.decoder import JSONDecodeError
+from typing import Dict, Tuple
 
 import geopy
 import requests
-from geopy.geocoders import Nominatim
 from geopy.exc import (
-    GeocoderTimedOut,
-    GeocoderServiceError,
-    GeocoderUnavailable,
     GeocoderParseError,
+    GeocoderServiceError,
+    GeocoderTimedOut,
+    GeocoderUnavailable,
 )
+from geopy.geocoders import Nominatim
 
 from .config import VARS, load_config, save_config
-from .utils import CLIWeatherException, confirm, choose
+from .utils import CLIWeatherException, choose, confirm
 
 logger = logging.getLogger(__file__)
 

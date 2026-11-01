@@ -5,13 +5,13 @@ Provides helper functions for exception handling, caching, logging,
 user input, and menu navigation.
 """
 
-import sys
+import hashlib
 import json
 import logging
-import hashlib
+import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Union
-from datetime import datetime, timedelta
 
 logger = logging.getLogger(__file__)
 
@@ -36,6 +36,7 @@ class CacheManager:
 
     def save(self, key: str, data: dict) -> None:
         """Saves data to the cache with a timestamp."""
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file = self.cache_dir / key
         with cache_file.open("w") as file:
             json.dump({"timestamp": datetime.now().isoformat(), "data": data}, file)
@@ -61,6 +62,8 @@ class CacheManager:
 
     def clear(self) -> None:
         """Clear all cached files."""
+        if not self.cache_dir.exists():
+            return
         for cache_file in self.cache_dir.iterdir():
             cache_file.unlink()
         logger.debug("Cache cleared successfully.")

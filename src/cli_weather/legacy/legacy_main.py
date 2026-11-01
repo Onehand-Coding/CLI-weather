@@ -6,31 +6,31 @@ This module preserves the original CLI Weather Application functionality
 using the original mixed-concern architecture for users who need compatibility.
 """
 
+import logging
 import sys
 import time
-import logging
 
-from .config import CACHED_DIR, LOG_DIR, CACHE_EXPIRY, configure_logging
-from .utils import CLIWeatherException, CacheManager, run_menu, clear_logs
-from .weather import (
-    view_current,
-    view_hourly,
-    view_5day,
-    view_certain_day,
-    view_best_activity_day,
-    view_typhoon_tracker,
-)
+from .activity import add_activity, delete_activity, edit_activity, view_activities
+from .config import CACHE_DIR, CACHE_EXPIRY, LOG_DIR, configure_logging
 from .location import (
-    view_locations,
     add_location,
+    delete_location,
     save_current_location,
     search_location,
-    delete_location,
+    view_locations,
 )
-from .activity import view_activities, add_activity, edit_activity, delete_activity
+from .utils import CacheManager, CLIWeatherException, clear_logs, run_menu
+from .weather import (
+    view_5day,
+    view_best_activity_day,
+    view_certain_day,
+    view_current,
+    view_hourly,
+    view_typhoon_tracker,
+)
 
 # Use caching for fetching weather data.
-cache_manager = CacheManager(CACHED_DIR, CACHE_EXPIRY)
+cache_manager = CacheManager(CACHE_DIR, CACHE_EXPIRY)
 
 # == Menu Options == #
 WEATHER_OPTIONS = [
