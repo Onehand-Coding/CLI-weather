@@ -13,11 +13,11 @@ version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
     "geopy==2.4.1",
-    "python-dotenv==1.0.1",
     "requests==2.32.3",
     "tzdata==2024.2",
     "rich>=13.0.0",
     "typer>=0.9.0",
+    "textual>=8.0.0",
 ]
 
 # Development dependencies
@@ -31,6 +31,9 @@ dev = [
 [project.scripts]
 cli-weather = "cli_weather.__main__:main"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
 
 # Code formatting and linting
 [tool.ruff]

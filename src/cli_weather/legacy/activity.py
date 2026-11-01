@@ -4,7 +4,7 @@ import logging
 from typing import Dict
 
 from .config import UNITS, load_config, save_config
-from .utils import confirm, choose
+from .utils import choose, confirm
 
 logger = logging.getLogger(__file__)
 

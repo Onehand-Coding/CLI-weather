@@ -5,13 +5,13 @@ Provides helper functions for exception handling, caching, logging,
 user input, and menu navigation.
 """
 
-import sys
+import hashlib
 import json
 import logging
-import hashlib
+import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Union
-from datetime import datetime, timedelta
 
 logger = logging.getLogger(__file__)
 
@@ -26,6 +26,7 @@ class CacheManager:
     def __init__(self, cache_dir: Path, expiry: timedelta):
         self.cache_dir = cache_dir
         self.expiry = expiry
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def _generate_key(self, *args) -> str:
         """Generates a unique MD5 hash key for cache entries."""

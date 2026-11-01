@@ -7,9 +7,8 @@ and Typer command-line interface modes. It uses the new separated architecture
 with core business logic and UI implementations.
 """
 
-import sys
-import argparse
 import logging
+import sys
 
 from .legacy.config import configure_logging
 from .legacy.utils import CLIWeatherException
@@ -17,10 +16,27 @@ from .legacy.utils import CLIWeatherException
 logger = logging.getLogger(__name__)
 
 
+def run_tui():
+    """Run the Textual TUI."""
+    try:
+        from .ui.tui import run as run_tui_app
+
+        run_tui_app()
+    except ImportError as e:
+        print(f"Error: TUI not available. {e}")
+        print("Please install the 'textual' package: pip install textual")
+        sys.exit(1)
+    except Exception as e:
+        logger.exception(f"Error in TUI: {e}")
+        print(f"Error running TUI: {e}")
+        sys.exit(1)
+
+
 def run_rich_ui():
     """Run the Rich-based interactive UI."""
     try:
         from .ui.rich_ui import RichUI
+
         ui = RichUI()
         ui.run()
     except ImportError as e:
@@ -37,6 +53,7 @@ def run_typer_cli(args=None):
     """Run the Typer-based command-line interface."""
     try:
         from .ui.typer_cli import TyperCLI
+
         cli = TyperCLI()
         cli.run(args)
     except ImportError as e:
@@ -54,6 +71,7 @@ def run_legacy_ui():
     try:
         # Import legacy main function
         from .legacy.legacy_main import legacy_main
+
         legacy_main()
     except ImportError:
         print("Legacy UI not available. Using Rich UI instead.")
@@ -66,23 +84,20 @@ def run_legacy_ui():
 
 def detect_ui_mode(args):
     """Detect which UI mode to use based on arguments."""
-    # If there are command line arguments (beyond script name), use Typer CLI
-    if len(args) > 1:
-        # Check if it's a help request or specific command
-        if any(arg in ['--help', '-h', 'help'] for arg in args[1:]):
-            return 'typer'
-        # Check for known Typer commands
-        known_commands = ['weather', 'location', 'activity', 'config', 'interactive']
-        if len(args) > 1 and args[1] in known_commands:
-            return 'typer'
-        # Check for legacy mode flag
-        if '--legacy' in args or '--old' in args:
-            return 'legacy'
-        # Default to typer for any other arguments
-        return 'typer'
-    else:
-        # No arguments, default to Rich UI
-        return 'rich'
+    if len(args) <= 1:
+        return "tui"
+    if "--tui" in args:
+        return "tui"
+    if "--rich" in args:
+        return "rich"
+    if "--legacy" in args or "--old" in args:
+        return "legacy"
+    if "--cli" in args or any(arg in ["--help", "-h", "help"] for arg in args[1:]):
+        return "typer"
+    known_commands = ["weather", "location", "activity", "config"]
+    if args[1] in known_commands:
+        return "typer"
+    return "typer"
 
 
 def show_help():
@@ -90,25 +105,20 @@ def show_help():
     help_text = """
 CLI Weather Assistant - Usage Options:
 
-🌤️  Interactive Modes:
-  cli-weather                    # Launch Rich interactive UI (default)
-  cli-weather --legacy          # Launch legacy interactive UI
-  cli-weather interactive       # Explicitly launch Rich UI
+🌤️  Interfaces:
+  cli-weather                    # Launch the Textual TUI (default)
+  cli-weather --tui              # Explicitly launch the TUI
+  cli-weather --rich             # Launch the Rich interactive UI
+  cli-weather --legacy           # Launch the legacy UI
 
 ⚡ Command Line Interface:
-  cli-weather weather --help    # Weather commands help
-  cli-weather location --help   # Location commands help
-  cli-weather activity --help   # Activity commands help
-  cli-weather config --help     # Configuration commands help
-
-📖 Examples:
+  cli-weather --cli weather --help
   cli-weather weather current --current
-  cli-weather weather daily --location "New York"
-  cli-weather location add "Home" --lat 40.7128 --lon -74.0060
-  cli-weather activity add "jogging" --temp-min 15 --temp-max 25
+  cli-weather location list
+  cli-weather activity list
 
-🔗 For full command documentation:
-  cli-weather --help
+Configuration is stored at ~/.config/cli-weather/config.json.
+Set CLI_WEATHER_CONFIG_DIR to override the location.
 """
     print(help_text)
 
@@ -117,27 +127,31 @@ def main() -> None:
     """Main entry point for the CLI Weather Application."""
     configure_logging()
     logger.debug("CLI Weather application started")
-    
+
     try:
         # Handle special help cases
-        if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h', 'help']:
+        if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h", "help"]:
             show_help()
             return
-        
+
         # Detect UI mode
         ui_mode = detect_ui_mode(sys.argv)
-        
+
         logger.debug(f"Selected UI mode: {ui_mode}")
-        
+
         # Run appropriate UI
-        if ui_mode == 'rich':
+        if ui_mode == "tui":
+            run_tui()
+        elif ui_mode == "rich":
             run_rich_ui()
-        elif ui_mode == 'typer':
-            # Remove script name and pass remaining args
-            run_typer_cli(sys.argv[1:])
-        elif ui_mode == 'legacy':
+        elif ui_mode == "typer":
+            args = [arg for arg in sys.argv[1:] if arg != "--cli"]
+            run_typer_cli(args)
+        elif ui_mode == "legacy":
             # Remove legacy flag and run legacy UI
-            filtered_args = [arg for arg in sys.argv if arg not in ['--legacy', '--old']]
+            filtered_args = [
+                arg for arg in sys.argv if arg not in ["--legacy", "--old"]
+            ]
             if len(filtered_args) == 1:  # Only script name remains
                 run_legacy_ui()
             else:
@@ -147,7 +161,7 @@ def main() -> None:
             print(f"Unknown UI mode: {ui_mode}")
             show_help()
             sys.exit(1)
-            
+
     except KeyboardInterrupt:
         logger.debug("Application interrupted by user")
         print("\nGoodbye!")

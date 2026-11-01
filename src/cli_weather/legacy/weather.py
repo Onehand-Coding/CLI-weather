@@ -1,25 +1,24 @@
 """Weather data handling functions."""
 
-import time
 import logging
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from typing import List, Dict, Tuple
+import time
 from collections import defaultdict
+from datetime import datetime
+from typing import Dict, List, Tuple
+from zoneinfo import ZoneInfo
 
 import requests
 
+from .activity import choose_activity
+from .config import API_KEY, LOCAL_TIMEZONE, load_config
+from .location import choose_location, get_location
 from .utils import (
-    CLIWeatherException,
     CacheManager,
+    CLIWeatherException,
+    choose_local_path,
     confirm,
     get_index,
-    choose_local_path,
-    run_menu,
 )
-from .config import API_KEY, LOCAL_TIMEZONE, load_config
-from .activity import choose_activity
-from .location import get_location, choose_location
 
 logger = logging.getLogger(__file__)
 

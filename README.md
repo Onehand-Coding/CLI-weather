@@ -1,362 +1,133 @@
-# CLI Weather - Your Command-Line Weather Companion
+# CLI Weather
 
-CLI Weather is a versatile command-line application built with Python that provides current weather information, detailed forecasts, and personalized activity recommendations. It leverages the OpenWeatherMap API to fetch up-to-date weather data and offers multiple user interfaces to suit different use cases.
+[![CI](https://github.com/Onehand-Coding/cli-weather/actions/workflows/ci.yml/badge.svg)](https://github.com/Onehand-Coding/cli-weather/actions/workflows/ci.yml)
 
-This project follows modern Python architecture with clean separation of concerns, multiple UI implementations, and is optimized for use with the uv package manager.
+A Textual terminal UI for current weather, forecasts, activity planning, and
+typhoon alerts. It also keeps a Typer CLI for scripting.
 
 ## Features
 
-* **Current Weather:** Get real-time weather conditions for any chosen location.
-* **Hourly Forecasts:** View weather predictions for the next 24 hours.
-* **5-Day Forecasts:** Plan ahead with a 5-day weather outlook.
-* **Specific Day Forecast:** Get detailed weather for a particular day within the 5-day range.
-* **Activity-Based Recommendations:** Discover the best days for your favorite activities based on customizable weather criteria (e.g., temperature, rain, wind, time of day).
-* **Typhoon Tracking & Alerts:** View active weather alerts, including typhoon warnings, for your chosen location and save them to a file.
-* **Location Management:**
-    * Save and manage a list of your favorite locations.
-    * Add new locations by name or coordinates.
-    * Automatically fetch and save your current location.
-    * Search for locations globally.
-* **Activity Management:**
-    * Define and customize weather criteria for different activities (e.g., walking, fishing).
-    * View, add, edit, and delete your saved activities.
-* **Data Management:**
-    * Cache weather data locally to improve performance and reduce API calls.
-    * Option to clear cached data.
-    * Option to clear application logs.
-* **Save Forecasts:** Save weather forecasts to a text file for offline viewing.
+- Textual TUI with setup, weather, locations, activities, and settings screens.
+- Current weather, 24-hour forecast, 5-day forecast, and specific-day forecast.
+- Best-day recommendations for saved activities.
+- Typhoon and weather alerts.
+- Saved locations and activities in a single config file.
+- Typer CLI for automation.
+- Rich and legacy menus remain available as fallbacks.
 
-## Requirements
+## Install
 
-* Python 3.10+
-* An OpenWeatherMap API Key
-* Dependencies are managed in pyproject.toml and include:
-    * geopy - Location geocoding and geospatial calculations
-    * python-dotenv - Environment variable management
-    * requests - HTTP client for weather API calls
-    * tzdata - Timezone data
-    * rich - Enhanced terminal output with modern styling
-    * typer - Command-line interface framework
+Requirements: Python 3.10+ and [uv](https://github.com/astral-sh/uv).
 
-## Installation
+```bash
+git clone https://github.com/Onehand-Coding/cli-weather.git
+cd cli-weather
+uv sync --extra dev
+uv run cli-weather
+```
 
-This project is managed with uv for modern Python dependency management.
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Onehand-Coding/cli-weather.git
-   cd cli-weather
-   ```
-
-2. **Install with uv (recommended):**
-   ```bash
-   uv sync
-   ```
-   This command automatically creates a virtual environment, installs all dependencies, and sets up the project in editable mode.
-
-### Alternative Installation (Traditional Method)
-
-If you prefer to use standard Python tools:
-
-1. **Create and activate a virtual environment:**
-   ```bash
-   python -m venv .venv
-
-   # On Linux/macOS
-   source .venv/bin/activate
-
-   # On Windows
-   .\.venv\Scripts\activate
-   ```
-
-2. **Install the project in editable mode:**
-   ```bash
-   pip install -e .
-   ```
+On first launch the TUI asks for an OpenWeatherMap API key and saves it to your
+config file.
 
 ## Configuration
 
-### API Key Setup
+Configuration is app-managed. There is no `.env` file.
 
-This application requires an API key from [OpenWeatherMap](https://openweathermap.org/api) to fetch weather data.
+- Config: `~/.config/cli-weather/config.json`
+- Cache: `~/.cache/cli-weather`
+- Logs: `~/.local/state/cli-weather/logs`
+- Data: `~/.local/share/cli-weather`
 
-1. Sign up for a free account on OpenWeatherMap and obtain your API key.
-2. Create a `.env` file in the root directory of the project (`cli-weather/.env`).
-3. Add your API key to the `.env` file like this:
-   ```
-   OWM_API_KEY=your_actual_api_key_here
-   ```
+The config file stores the API key, timezone, log level, locations, and
+activities. On POSIX systems it is written with mode `0600`.
 
-### Other Environment Variables (Optional)
-
-You can also set the following optional environment variables in your `.env` file:
-
-* `TZ`: Set your local timezone (e.g., `Asia/Manila`). Defaults to `UTC` if not set.
-* `LOG_LEVEL`: Set the logging level (e.g., `DEBUG`, `INFO`, `WARNING`, `ERROR`). Defaults to `ERROR`.
-* You can also define sensitive locations directly in the `.env` file using a custom name and comma-separated coordinates, for example:
-  ```
-  MY_SECRET_SPOT=12.345,67.890
-  ```
-
-### Application Data
-
-* **Configuration File (`data/config.json`):** Stores your saved locations and activity criteria. This file is automatically created and managed by the application.
-* **Cache (`data/cache/`):** Weather data is cached here to speed up requests and reduce API usage. Cache expires after 30 minutes.
-* **Logs (`logs/weather_app.log`):** Application logs are stored here.
-
-## Usage
-
-CLI Weather offers multiple user interfaces to suit different workflows and preferences:
-
-### 🎨 Rich Interactive UI (Default)
-
-Launches a modern, interactive menu system with enhanced visuals, tables, progress bars, and styled output:
+Overrides:
 
 ```bash
-uv run cli-weather                    # Default mode
-# or
-uv run python -m cli_weather
-# or
-cli-weather                           # If installed with pip
+CLI_WEATHER_CONFIG_DIR=/path/to/config
+CLI_WEATHER_CACHE_DIR=/path/to/cache
+CLI_WEATHER_LOG_DIR=/path/to/logs
+CLI_WEATHER_DATA_DIR=/path/to/data
+OWM_API_KEY=your_key
 ```
 
-### ⚡ Command Line Interface (Typer)
+`OWM_API_KEY` is optional and is intended for automation. The TUI Settings screen
+is the normal way to set the key.
 
-For automation, scripting, and direct command execution:
+## TUI
 
 ```bash
-# Weather commands
-uv run cli-weather weather current --current
+uv run cli-weather
+```
+
+Screens:
+
+- **Setup**: first-run API key, timezone, and log level.
+- **Weather**: choose a forecast type, saved location, current location, or
+  manual coordinates; load results into a table.
+- **Locations**: add by address or coordinates, and delete saved locations.
+- **Activities**: add weather criteria for an activity, and delete activities.
+- **Settings**: edit the API key, timezone, and log level; clear cache or logs.
+
+Keyboard: `q` quits from the main screen, `Escape` goes back, and `s` opens
+Settings from the main screen.
+
+## CLI
+
+```bash
+uv run cli-weather --cli weather current --current
 uv run cli-weather weather daily --location "New York"
 uv run cli-weather weather hourly --lat 40.7128 --lon -74.0060
-uv run cli-weather weather day 3 --location "Denver" --hourly
 uv run cli-weather weather activity hiking --current
 uv run cli-weather weather alerts --current
-
-# Location management
 uv run cli-weather location list
-uv run cli-weather location add "Home" --lat 40.7128 --lon -74.0060
-uv run cli-weather location current --name "My Location"
-uv run cli-weather location search "Tokyo"
-
-# Activity management
 uv run cli-weather activity list
-uv run cli-weather activity add "jogging" --temp-min 15 --temp-max 25 --rain 0
-uv run cli-weather activity show hiking
-
-# Configuration
 uv run cli-weather config clear-cache
-uv run cli-weather config clear-logs
 ```
 
-### 🔄 Legacy Mode
+Run `uv run cli-weather --cli --help` for the full command list.
 
-For backwards compatibility with the original interface:
+## Other Interfaces
 
 ```bash
-uv run cli-weather --legacy
+uv run cli-weather --rich     # Rich menu
+uv run cli-weather --legacy   # Original menu
 ```
 
-### 📋 Command Line Options
-
-**Common Location Options:**
-- `--location NAME` or `-l NAME`: Use a saved location
-- `--current` or `-c`: Auto-detect current location via IP
-- `--lat LAT --lon LON`: Use specific coordinates
-
-**Output Options:**
-- `--json`: Output data in JSON format (CLI mode only)
-- `--output FILE` or `-o FILE`: Save results to file
-- `--hours N`: Number of hours for hourly forecasts (1-120)
-- `--hourly`: Show hourly details for specific day forecasts
-
-**Activity Options:**
-- `--temp-min N`: Minimum temperature in Celsius
-- `--temp-max N`: Maximum temperature in Celsius
-- `--rain N`: Maximum rainfall in mm
-- `--wind-min N`: Minimum wind speed in km/h
-- `--wind-max N`: Maximum wind speed in km/h
-- `--start HH:MM`: Activity start time
-- `--end HH:MM`: Activity end time
-
-**Examples:**
+## Development
 
 ```bash
-# Get current weather for saved location
-uv run cli-weather weather current -l "New York"
-
-# Get 5-day forecast for current location
-uv run cli-weather weather daily --current
-
-# Get specific day with hourly details
-uv run cli-weather weather day 2 --current --hourly
-
-# Find best days for activity with JSON output
-uv run cli-weather weather activity hiking --current --json
-
-# Get hourly forecast and save to file
-uv run cli-weather weather hourly --lat 35.6762 --lon 139.6503 -o forecast.txt
-
-# Add location by address geocoding
-uv run cli-weather location add "Office" --address "Times Square, New York"
+uv sync --extra dev
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest
 ```
 
-### 💡 Getting Help
-
-```bash
-# General help
-uv run cli-weather --help
-
-# Command-specific help
-uv run cli-weather weather --help
-uv run cli-weather location --help
-uv run cli-weather activity --help
-```
+CI runs the same commands plus a wheel build and a TUI package check.
 
 ## Architecture
 
-CLI Weather follows a clean, modular architecture with clear separation of concerns:
-
-### 🏗️ Project Structure
-
-```
+```text
 src/cli_weather/
-├── core/                    # Pure business logic (no UI concerns)
-│   ├── app.py              # Main app orchestrator
-│   ├── weather_service.py   # Weather API and data processing
-│   ├── location_service.py  # Location management and geocoding
-│   ├── activity_service.py  # Activity criteria management
-│   ├── config_service.py    # Configuration management
-│   ├── cache_service.py     # Data caching
-│   ├── models.py           # Data models (Location, Activity, WeatherData)
-│   └── exceptions.py       # Custom exceptions
-├── ui/                     # UI layer (multiple implementations)
-│   ├── rich_ui.py          # Rich-based interactive UI
-│   └── typer_cli.py        # Typer-based command-line UI
-├── legacy/                 # Original mixed-concern modules
-└── __main__.py             # Main entry point with UI selection
+  core/                 services and app orchestration
+  ui/tui.py             Textual TUI
+  ui/typer_cli.py       Typer CLI
+  ui/rich_ui.py         Rich menu
+  legacy/               legacy UI and shared storage helpers
 ```
 
-### 🧩 Core Principles
+The TUI talks to `WeatherApp`, which composes the weather, location, activity,
+and cache services. The config file is the single source of truth for settings,
+locations, and activities.
 
-1. **Separation of Concerns**: Business logic is completely isolated from UI concerns
-2. **Multiple UI Support**: Same core functionality accessible through different interfaces
-3. **Dependency Injection**: Services are injected rather than directly instantiated
-4. **Clean Data Models**: Well-defined data structures for all entities
-5. **Comprehensive Testing**: Full test coverage of business logic with proper mocking
-6. **Error Handling**: Consistent error handling across all layers
+## Troubleshooting
 
-### 📊 Data Flow
-
-```
-UI Layer → App Orchestrator → Services → External APIs/Storage
-  │              │              │              │
- Rich UI       WeatherApp    Weather     OpenWeatherMap
- Typer CLI                   Location    Nominatim
- Legacy UI                   Activity    Config Files
-                             Cache       File System
-```
-
-### 🔌 Services Overview
-
-- **WeatherService**: Handles all weather-related operations (API calls, data parsing, caching)
-- **LocationService**: Manages locations (geocoding, IP-based detection, persistence)
-- **ActivityService**: Manages activity criteria and weather filtering
-- **ConfigService**: Handles configuration persistence and retrieval
-- **CacheService**: Manages data caching with expiration
-
-## Testing
-
-CLI Weather includes a comprehensive test suite covering all core business logic with proper mocking and isolation. The tests are designed to validate the separation of concerns and ensure reliability across different components.
-
-### 🧪 Test Framework & Setup
-
-The project uses **pytest** for testing with development dependencies managed through the `dev` extra group:
-
-```bash
-# Install with development dependencies
-uv sync --extra dev
-
-# Or add dev dependencies to existing installation
-uv sync --extra dev
-```
-
-### 🏃 Running Tests
-
-```bash
-# Run all tests with pytest (recommended)
-uv run pytest
-
-# Run tests with verbose output
-uv run pytest -v
-
-# Run specific test files
-uv run pytest tests/test_services.py    # Core business logic services
-uv run pytest tests/test_ui.py          # UI components and CLI
-uv run pytest tests/test_core.py        # Legacy functionality
-
-# Run tests for specific functionality
-uv run pytest tests/test_services.py::TestWeatherService
-uv run pytest tests/test_services.py::TestLocationService::test_geocode_address
-
-# Alternative: Run with unittest discovery
-uv run python -m unittest discover tests
-```
-
-### 📋 Test Coverage
-
-The test suite includes **74 comprehensive tests** covering:
-
-#### Core Services (`test_services.py`)
-- **WeatherService**: API integration, data parsing, caching, activity filtering
-- **LocationService**: Geocoding, coordinate validation, location management
-- **ActivityService**: Activity criteria management, CRUD operations
-- **WeatherApp**: Application orchestration and service integration
-- **Data Models**: Location, Activity, and WeatherData model validation
-- **CacheService**: Data caching with expiration and cleanup
-
-#### UI Components (`test_ui.py`)
-- **Rich UI**: Interactive menu system, weather displays, formatting
-- **Typer CLI**: Command-line parsing, argument handling, output formatting
-- **Main Entry**: UI mode detection, help system, command routing
-
-#### Legacy Functionality (`test_core.py`)
-- **Weather Operations**: API calls, data processing, forecast parsing
-- **Location Management**: Address geocoding, coordinate handling, persistence
-- **Activity Management**: Criteria definition, weather filtering
-- **Typhoon Tracking**: Alert fetching, data processing, user interaction
-
-### 🔧 Test Features
-
-- **Comprehensive Mocking**: All external dependencies (APIs, file system, network) are mocked
-- **Isolation**: Each test runs independently with proper setup and teardown
-- **Edge Cases**: Tests cover error conditions, invalid inputs, and boundary cases
-- **Data Validation**: Ensures data models work correctly with various inputs
-- **UI Testing**: Validates both Rich interactive UI and Typer CLI functionality
-- **Float Precision**: Uses appropriate precision handling for coordinate comparisons
-
-### 🚫 Test Dependencies
-
-Tests are designed to run without:
-- External API keys (all API calls are mocked)
-- Network connectivity (no real HTTP requests)
-- File system modifications (temporary directories used)
-- User input (interactive prompts are mocked)
-
-This ensures tests can run in CI/CD environments and isolated development setups.
-
-### 📊 Test Configuration
-
-Test configuration is managed in `pyproject.toml`:
-- pytest configuration with test discovery
-- Development dependencies including pytest
-- Proper Python path configuration for imports
+- **Missing API key:** open Settings in the TUI and save a key.
+- **No weather data:** check the API key, network connection, and location.
+- **Old `.env` file:** it is ignored. Move the key into the TUI Settings screen
+  or `config.json`.
+- **No map/address:** geocoding is network-dependent and may be rate-limited.
 
 ## License
 
-This project is licensed under the MIT License.
-
-## Author
-
-Onehand Coding (onehand.coding433@gmail.com)
-GitHub Repository: [https://github.com/Onehand-Coding/CLI-weather](https://github.com/Onehand-Coding/CLI-weather)
+MIT. See `LICENSE`.

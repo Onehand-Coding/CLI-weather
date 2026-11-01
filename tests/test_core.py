@@ -1,36 +1,36 @@
 import json
-import unittest
 import tempfile
-from pathlib import Path
+import unittest
 from datetime import datetime, timedelta
-from unittest.mock import patch, mock_open
+from pathlib import Path
+from unittest.mock import mock_open, patch
 
 import requests
-import geopy.exc
 
-from cli_weather.legacy.config import load_config, save_config, CONFIG_FILE
-from cli_weather.legacy.utils import CacheManager, CLIWeatherException, choose_local_path
-from cli_weather.legacy.weather import (
-    fetch_weather_data,
-    parse_weather_data,
-    filter_best_days,
-    save_weather_to_file,
-    display_grouped_forecast,
-    fetch_typhoon_data,
-    view_typhoon_tracker,
+from cli_weather.legacy.activity import (
+    choose_activity,
+    get_activity_criteria,
+    save_activity,
+    view_activities,
 )
 from cli_weather.legacy.location import (
-    load_locations,
-    is_valid_location,
     get_location,
+    is_valid_location,
+    load_locations,
     save_location,
     view_locations,
 )
-from cli_weather.legacy.activity import (
-    save_activity,
-    get_activity_criteria,
-    view_activities,
-    choose_activity,
+from cli_weather.legacy.utils import (
+    CacheManager,
+    CLIWeatherException,
+)
+from cli_weather.legacy.weather import (
+    display_grouped_forecast,
+    fetch_typhoon_data,
+    fetch_weather_data,
+    parse_weather_data,
+    save_weather_to_file,
+    view_typhoon_tracker,
 )
 
 # Sample test data
