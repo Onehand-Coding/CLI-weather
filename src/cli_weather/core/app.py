@@ -33,8 +33,8 @@ class WeatherApp:
             self.cache_manager,
             self.config.timezone,
         )
-        self.location_service = LocationService()
-        self.activity_service = ActivityService()
+        self.location_service = LocationService(self.config)
+        self.activity_service = ActivityService(self.config)
 
     # Weather-related methods
     def get_current_weather(self, location: Location) -> WeatherData:

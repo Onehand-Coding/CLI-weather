@@ -47,3 +47,7 @@ def test_cli_flag_runs_typer(monkeypatch):
 def test_known_command_runs_typer(monkeypatch):
     _, _, typer_cli, _ = run_with_args(monkeypatch, ["weather", "current"])
     typer_cli.assert_called_once_with(["weather", "current"])
+
+
+def test_legacy_ui_module_imports():
+    import cli_weather.legacy.legacy_main  # noqa: F401

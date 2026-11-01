@@ -104,18 +104,18 @@ class WeatherService:
                 raise CLIWeatherException(
                     f"Failed to fetch weather data, {e.response.reason}."
                 )
-        except requests.exceptions.Timeout as e:
-            logger.error(f"Error fetching weather data, connection timed out: {e}")
+        except requests.exceptions.Timeout:
+            logger.error("Error fetching weather data, connection timed out.")
             raise CLIWeatherException(
                 "Request timed out, Please check your network connection."
             )
-        except requests.exceptions.ConnectionError as e:
-            logger.error(f"Failed to fetch weather data, connection error: {e}")
+        except requests.exceptions.ConnectionError:
+            logger.error("Failed to fetch weather data, connection error.")
             raise CLIWeatherException(
                 "Network error, Please check your connection and try again."
             )
-        except requests.exceptions.RequestException as e:
-            logger.exception(f"Error fetching weather data: {e}")
+        except requests.exceptions.RequestException:
+            logger.error("Error fetching weather data.")
             raise CLIWeatherException(
                 "Failed to fetch weather data, Unexpected request error occurred."
             )
@@ -305,8 +305,8 @@ class WeatherService:
                 "current": data.get("current", {}),
                 "timezone": data.get("timezone", "UTC"),
             }
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching typhoon data: {e}")
+        except requests.exceptions.RequestException:
+            logger.error("Error fetching typhoon data.")
             raise CLIWeatherException(
                 "Failed to fetch typhoon data. Please check your internet connection and API key."
             )

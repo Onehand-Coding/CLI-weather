@@ -11,7 +11,7 @@ import sys
 import time
 
 from .activity import add_activity, delete_activity, edit_activity, view_activities
-from .config import CACHE_EXPIRY, CACHED_DIR, LOG_DIR, configure_logging
+from .config import CACHE_DIR, CACHE_EXPIRY, LOG_DIR, configure_logging
 from .location import (
     add_location,
     delete_location,
@@ -30,7 +30,7 @@ from .weather import (
 )
 
 # Use caching for fetching weather data.
-cache_manager = CacheManager(CACHED_DIR, CACHE_EXPIRY)
+cache_manager = CacheManager(CACHE_DIR, CACHE_EXPIRY)
 
 # == Menu Options == #
 WEATHER_OPTIONS = [

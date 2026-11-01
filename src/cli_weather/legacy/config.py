@@ -63,6 +63,7 @@ def get_log_dir() -> Path:
 CONFIG_DIR = get_config_dir()
 DATA_DIR = get_data_dir()
 CACHE_DIR = get_cache_dir()
+CACHED_DIR = CACHE_DIR
 LOG_DIR = get_log_dir()
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
@@ -157,12 +158,15 @@ LOCAL_TIMEZONE = get_timezone()
 LOG_LEVEL = get_log_level()
 
 
-def configure_logging(log_dir: Path | None = None) -> None:
+def configure_logging(
+    log_dir: Path | None = None, level_name: str | None = None
+) -> None:
     """Configure file logging under the XDG state directory."""
     directory = Path(log_dir) if log_dir is not None else LOG_DIR
     directory.mkdir(parents=True, exist_ok=True)
+    level = (level_name or get_log_level()).upper()
     logging.basicConfig(
-        level=getattr(logging, get_log_level().upper(), logging.ERROR),
+        level=getattr(logging, level, logging.ERROR),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
             RotatingFileHandler(

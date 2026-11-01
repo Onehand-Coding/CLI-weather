@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from textual import work
 from textual.app import App, ComposeResult
 from textual.containers import Vertical
@@ -74,6 +76,7 @@ def _save_settings(
         }
     )
     app.config.save_config(config)
+    app.config.setup_logging()
     app.rebuild_weather_app()
 
 
@@ -105,12 +108,16 @@ class SetupScreen(Screen):
         if not api_key:
             self.notify("API key is required.", severity="error")
             return
-        _save_settings(
-            self.app,
-            api_key,
-            self.query_one("#timezone", Input).value,
-            self.query_one("#log-level", Input).value,
-        )
+        try:
+            _save_settings(
+                self.app,
+                api_key,
+                self.query_one("#timezone", Input).value,
+                self.query_one("#log-level", Input).value,
+            )
+        except CLIWeatherException as exc:
+            self.notify(str(exc), severity="error")
+            return
         self.app.switch_screen(MainScreen())
         self.notify("Settings saved.")
 
@@ -219,7 +226,7 @@ class WeatherScreen(Screen):
         self.notify("Loading weather...")
         self.fetch_weather(str(forecast), str(location_value), day, activity, lat, lon)
 
-    @work(thread=True)
+    @work(thread=True, exclusive=True)
     def fetch_weather(
         self,
         forecast: str,
@@ -362,7 +369,7 @@ class LocationsScreen(Screen):
             return
         self.fetch_address(name, address)
 
-    @work(thread=True)
+    @work(thread=True, exclusive=True)
     def fetch_address(self, name: str, address: str) -> None:
         try:
             location = self.app.weather_app.geocode_address(address)
@@ -520,6 +527,7 @@ class SettingsScreen(Screen):
         yield Header()
         with Vertical(id="settings-form"):
             yield Static("Settings", classes="title")
+            yield Static("", id="env-note")
             yield Label("API key")
             yield Input(password=True, id="api-key")
             yield Label("Timezone")
@@ -533,7 +541,11 @@ class SettingsScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#api-key", Input).value = self.app.config.api_key
+        self.query_one("#api-key", Input).value = self.app.config.stored_api_key
+        if os.getenv("OWM_API_KEY"):
+            self.query_one("#env-note", Static).update(
+                "OWM_API_KEY is set in the environment and overrides the saved key."
+            )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
@@ -544,12 +556,16 @@ class SettingsScreen(Screen):
             if not api_key:
                 self.notify("API key is required.", severity="error")
                 return
-            _save_settings(
-                self.app,
-                api_key,
-                self.query_one("#timezone", Input).value,
-                self.query_one("#log-level", Input).value,
-            )
+            try:
+                _save_settings(
+                    self.app,
+                    api_key,
+                    self.query_one("#timezone", Input).value,
+                    self.query_one("#log-level", Input).value,
+                )
+            except CLIWeatherException as exc:
+                self.notify(str(exc), severity="error")
+                return
             self.app.switch_screen(MainScreen())
             self.notify("Settings saved.")
         elif button_id == "clear-cache":

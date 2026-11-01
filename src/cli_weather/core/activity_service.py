@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 
 from ..legacy.config import load_config, save_config
 from ..legacy.utils import CLIWeatherException
+from .config_service import ConfigService
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +79,24 @@ class Activity:
 class ActivityService:
     """Core activity service for managing weather activities."""
 
+    def __init__(self, config_service: ConfigService | None = None):
+        self.config_service = config_service
+
+    def _load_config(self):
+        if self.config_service is not None:
+            return self.config_service.load_config()
+        return load_config()
+
+    def _save_config(self, config):
+        if self.config_service is not None:
+            self.config_service.save_config(config)
+        else:
+            save_config(config)
+
     def load_activities(self) -> Dict[str, Activity]:
         """Load all saved activities."""
         logger.debug("Loading activities...")
-        config = load_config()
+        config = self._load_config()
         activities = {}
 
         for name, criteria in config.get("activities", {}).items():
@@ -101,20 +116,20 @@ class ActivityService:
     def save_activity(self, activity: Activity) -> None:
         """Save an activity to the configuration file."""
         logger.debug(f"Saving activity: {activity.name}")
-        configuration = load_config()
+        configuration = self._load_config()
         configuration.setdefault("activities", {})[activity.name] = activity.to_dict()
-        save_config(configuration)
+        self._save_config(configuration)
         logger.debug(f"'{activity.name}' saved successfully.")
 
     def delete_activity(self, activity_name: str) -> bool:
         """Delete an activity from saved activities."""
         try:
-            config = load_config()
+            config = self._load_config()
             activities = config.get("activities", {})
 
             if activity_name in activities:
                 del config["activities"][activity_name]
-                save_config(config)
+                self._save_config(config)
                 logger.debug(f"Activity '{activity_name}' deleted successfully.")
                 return True
             return False

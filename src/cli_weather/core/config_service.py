@@ -33,8 +33,12 @@ class ConfigService:
         storage.save_config(config, self.config_file)
 
     @property
+    def stored_api_key(self) -> str:
+        return str(self.load_config().get("api_key", ""))
+
+    @property
     def api_key(self) -> str:
-        return os.getenv("OWM_API_KEY") or str(self.load_config().get("api_key", ""))
+        return os.getenv("OWM_API_KEY") or self.stored_api_key
 
     @property
     def timezone(self) -> str:
@@ -51,7 +55,7 @@ class ConfigService:
         return storage.CACHE_EXPIRY
 
     def setup_logging(self) -> None:
-        storage.configure_logging(self.log_dir)
+        storage.configure_logging(self.log_dir, self.log_level)
 
     def get_locations(self) -> dict[str, Location]:
         locations = {}

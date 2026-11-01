@@ -51,8 +51,10 @@ CLI_WEATHER_DATA_DIR=/path/to/data
 OWM_API_KEY=your_key
 ```
 
-`OWM_API_KEY` is optional and is intended for automation. The TUI Settings screen
-is the normal way to set the key.
+`OWM_API_KEY` is optional and is intended for automation. When set, it takes
+precedence over the saved key. The TUI Settings screen shows a notice when the
+environment override is active and never copies the environment value into the
+config file.
 
 ## TUI
 

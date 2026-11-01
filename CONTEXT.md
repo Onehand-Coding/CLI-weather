@@ -55,15 +55,20 @@ uv run pytest
 - `legacy/config.py` constants are computed at import from the environment;
   `ConfigService` reads paths dynamically so tests can override them.
 - `ConfigService(config_dir=...)` isolates the config file for tests.
-- `OWM_API_KEY` overrides the saved key for automation.
-- Settings save rebuilds `WeatherApp` so the new key and timezone are used.
+- `OWM_API_KEY` overrides the saved key for automation. Settings pre-fills from
+  the stored key, not the environment, so saving other fields does not copy the
+  env secret into the config file.
+- Settings save rebuilds `WeatherApp` and reconfigures logging so the new key,
+  timezone, and log level are used.
+- `WeatherApp` injects its `ConfigService` into location and activity services,
+  so `ConfigService(config_dir=...)` isolates all config writes.
 - The TUI tests use Textual `run_test` and `asyncio.run`.
-- Do not log API keys; the 401 path now logs only a generic message.
+- Do not log API keys; the 401 paths log only a generic message.
 
 ## Known Limitations
 
-- Location and activity services still use the legacy config functions, which
-  share the same config file.
 - Geocoding and weather data require network access.
 - The Rich and legacy menus are not the primary interface and receive less test
   coverage.
+- Concurrent config writes are serialized only by the single-process UI. Do not
+  run multiple instances against the same config file.

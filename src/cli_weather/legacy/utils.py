@@ -26,7 +26,6 @@ class CacheManager:
     def __init__(self, cache_dir: Path, expiry: timedelta):
         self.cache_dir = cache_dir
         self.expiry = expiry
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def _generate_key(self, *args) -> str:
         """Generates a unique MD5 hash key for cache entries."""
@@ -37,6 +36,7 @@ class CacheManager:
 
     def save(self, key: str, data: dict) -> None:
         """Saves data to the cache with a timestamp."""
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file = self.cache_dir / key
         with cache_file.open("w") as file:
             json.dump({"timestamp": datetime.now().isoformat(), "data": data}, file)
@@ -62,6 +62,8 @@ class CacheManager:
 
     def clear(self) -> None:
         """Clear all cached files."""
+        if not self.cache_dir.exists():
+            return
         for cache_file in self.cache_dir.iterdir():
             cache_file.unlink()
         logger.debug("Cache cleared successfully.")

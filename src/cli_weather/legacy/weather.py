@@ -43,9 +43,7 @@ def fetch_weather_data(
         "current": f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric",
     }
     try:
-        logger.debug(
-            f"Fetching weather data for: '{forecast_type}' forecast from: {urls[forecast_type]}"
-        )
+        logger.debug("Fetching weather data for: %s forecast", forecast_type)
         response = requests.get(urls[forecast_type], timeout=10)
         response.raise_for_status()
         logger.debug(f"Data for {forecast_type} fetched successfully.")
@@ -61,10 +59,8 @@ def fetch_weather_data(
                 "Failed to fetch weather data. Location not found!"
             )
         elif e.response.status_code == 401:
-            logger.error(f"Failed to fetch weather data. Invalid API key: {api_key}")
-            raise CLIWeatherException(
-                f"Failed to fetch weather data. Invalid API key: {api_key}"
-            )
+            logger.error("Failed to fetch weather data. Invalid API key.")
+            raise CLIWeatherException("Failed to fetch weather data. Invalid API key.")
         else:
             logger.error(
                 f"Failed to fetch weather data, HTTP error occurred: {e.response.status_code} {e.response.reason}"
@@ -72,18 +68,18 @@ def fetch_weather_data(
             raise CLIWeatherException(
                 f"Failed to fetch weather data, {e.response.reason}."
             )
-    except requests.exceptions.Timeout as e:
-        logger.error(f"Error fetching weather data, connection timed out: {e}")
+    except requests.exceptions.Timeout:
+        logger.error("Error fetching weather data, connection timed out.")
         raise CLIWeatherException(
             "Request timed out, Please check your network connection."
         )
-    except requests.exceptions.ConnectionError as e:
-        logger.error(f"Failed to fetch weather data, connection error: {e}")
+    except requests.exceptions.ConnectionError:
+        logger.error("Failed to fetch weather data, connection error.")
         raise CLIWeatherException(
             "Network error, Please check your connection and try again."
         )
-    except requests.exceptions.RequestException as e:
-        logger.exception(f"Error fetching weather data: {e}")
+    except requests.exceptions.RequestException:
+        logger.error("Error fetching weather data.")
         raise CLIWeatherException(
             "Failed to fetch weather data, Unexpected request error occurred."
         )
@@ -521,8 +517,8 @@ def fetch_typhoon_data(api_key: str, lat: float, lon: float) -> Dict:
             "current": data.get("current", {}),
             "timezone": data.get("timezone", "UTC"),
         }
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching typhoon data: {e}")
+    except requests.exceptions.RequestException:
+        logger.error("Error fetching typhoon data.")
         raise CLIWeatherException(
             "Failed to fetch typhoon data. Please check your internet connection and API key."
         )

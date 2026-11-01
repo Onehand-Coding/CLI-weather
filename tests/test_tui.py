@@ -87,3 +87,51 @@ def test_weather_screen_loads_current_weather(tmp_path):
             fake_app.get_current_weather.assert_called_once()
 
     asyncio.run(scenario())
+
+
+def test_settings_does_not_copy_environment_key(tmp_path, monkeypatch):
+    config = ConfigService(tmp_path)
+    config.save_config({"api_key": "saved-key"})
+    monkeypatch.setenv("OWM_API_KEY", "env-secret")
+
+    async def scenario():
+        app = WeatherTUI(config)
+        async with app.run_test() as pilot:
+            app.push_screen(SettingsScreen())
+            await pilot.pause()
+            app.screen.query_one("#timezone", Input).value = "Asia/Manila"
+            await pilot.click("#save")
+            await pilot.pause()
+
+    asyncio.run(scenario())
+
+    reloaded = ConfigService(tmp_path)
+    assert reloaded.load_config()["api_key"] == "saved-key"
+    assert reloaded.api_key == "env-secret"
+
+
+def test_main_menu_navigation(tmp_path):
+    from cli_weather.ui.tui import ActivitiesScreen, LocationsScreen
+
+    config = ConfigService(tmp_path)
+    config.save_config({"api_key": "key"})
+
+    async def scenario():
+        app = WeatherTUI(config)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            await pilot.click("#locations")
+            await pilot.pause()
+            assert isinstance(app.screen, LocationsScreen)
+            app.pop_screen()
+            await pilot.pause()
+            await pilot.click("#activities")
+            await pilot.pause()
+            assert isinstance(app.screen, ActivitiesScreen)
+            app.pop_screen()
+            await pilot.pause()
+            await pilot.click("#settings")
+            await pilot.pause()
+            assert isinstance(app.screen, SettingsScreen)
+
+    asyncio.run(scenario())

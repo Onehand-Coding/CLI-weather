@@ -21,6 +21,7 @@ from geopy.geocoders import Nominatim
 
 from ..legacy.config import VARS, load_config, save_config
 from ..legacy.utils import CLIWeatherException
+from .config_service import ConfigService
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +58,21 @@ class Location:
 class LocationService:
     """Core location service for managing locations and geocoding."""
 
-    def __init__(self):
+    def __init__(self, config_service: ConfigService | None = None):
+        self.config_service = config_service
         self.geolocator = Nominatim(user_agent="weather_assistant", timeout=10)
         geopy.adapters.BaseAdapter.session = requests.Session()
+
+    def _load_config(self):
+        if self.config_service is not None:
+            return self.config_service.load_config()
+        return load_config()
+
+    def _save_config(self, config):
+        if self.config_service is not None:
+            self.config_service.save_config(config)
+        else:
+            save_config(config)
 
     def is_valid_coordinate(self, value: str) -> bool:
         """Checks if a given string represents valid latitude/longitude coordinates."""
@@ -76,7 +89,7 @@ class LocationService:
 
         # Load from config file
         config_locations = {}
-        config_data = load_config().get("locations", {})
+        config_data = self._load_config().get("locations", {})
         for name, coord_str in config_data.items():
             if self.is_valid_coordinate(coord_str):
                 lat, lon = map(float, coord_str.split(","))
@@ -95,20 +108,20 @@ class LocationService:
     def save_location(self, location: Location) -> None:
         """Saves a location to the configuration file."""
         logger.debug(f"Saving location: {location.name}...")
-        configuration = load_config()
+        configuration = self._load_config()
         configuration.setdefault("locations", {})[location.name] = (
             location.to_coord_string()
         )
-        save_config(configuration)
+        self._save_config(configuration)
         logger.debug(f"{location.name} location saved successfully.")
 
     def delete_location(self, location_name: str) -> bool:
         """Delete a location from saved locations."""
         try:
-            config = load_config()
+            config = self._load_config()
             if location_name in config.get("locations", {}):
                 del config["locations"][location_name]
-                save_config(config)
+                self._save_config(config)
                 logger.debug(f"Location '{location_name}' deleted successfully.")
                 return True
             return False
